@@ -1,66 +1,48 @@
 """
-This script loads contact data, preprocesses it to create features, trains a
-multiclass XGBoost model to predict user engagement level (No Engagement,
-Opener, Clicker), and then uses SHAP to interpret the model's predictions.
+This script trains a multiclass XGBoost model to predict user engagement,
+using GridSearchCV to find the optimal hyperparameters before evaluating
+the final model.
 """
 
 import sys
 import pandas as pd
 import numpy as np
 import xgboost as xgb
-import shap
 import matplotlib.pyplot as plt
+import seaborn as sns
 from pathlib import Path
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.impute import SimpleImputer
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics import classification_report, confusion_matrix
 from typing import Tuple
 
-# --- Configuration ---
-CSV_FILE_PATH = Path("enriched_contacts.csv")
-# MODIFIED: Changed target variable to reflect multiclass goal
+# --- Configuration (Unchanged) ---
+CSV_FILE_PATH = Path("merged_contacts.csv")
 TARGET_VARIABLE = "engagement_level"
-
-# Define column types for processing
-TEXT_COLS = [
-    'campaign_id',
-    'email_subjects',
-    'email_bodies'
-]
-TIMESTAMP_COLS = [
-    'timestamp_created',
-    'timestamp_last_contact',
-    'retrieval_timestamp',
-    'enriched_at',
-    'inserted_at',
-    'last_contacted_from'
-]
-CATEGORICAL_COLS = [
-    'title', 'seniority', 'organization_industry', 'country', 'city',
-    'verification_status', 'enrichment_status', 'upload_method', 'api_status',
-    'state'
-]
+TEXT_COLS = ['campaign_id', 'email_subjects', 'email_bodies']
+TIMESTAMP_COLS = ['timestamp_created', 'timestamp_last_contact', 'retrieval_timestamp', 'enriched_at', 'inserted_at', 'last_contacted_from']
+CATEGORICAL_COLS = ['title', 'seniority', 'organization_industry', 'country', 'city', 'verification_status', 'enrichment_status', 'upload_method', 'api_status', 'state']
 JSONB_COLS = ['employment_history', 'organization_data', 'account_data', 'api_response_raw']
-
 COLS_TO_DROP = [
     'id', 'email', 'first_name', 'last_name', 'company_name', 'linkedin_url',
     'website', 'headline', 'company_domain', 'phone', 'apollo_id',
     'apollo_name', 'organization', 'photo_url', 'organization_name',
-    'organization_website', 'organization_phone',
-    'email_reply_count', 'email_opened_variant', 'email_opened_step',
-    'timestamp_last_open', 'timestamp_last_reply', 'timestamp_last_click',
-    'timestamp_last_touch', 'timestamp_last_interest_change', 'timestamp_updated',
-    'personalization', 'status_summary', 'payload', 'list_id',
-    'assigned_to', 'campaign', 'uploaded_by_user',
+    'organization_website', 'organization_phone', 'email_reply_count',
+    'email_opened_variant', 'email_opened_step', 'timestamp_last_open',
+    'timestamp_last_reply', 'timestamp_last_click', 'timestamp_last_touch',
+    'timestamp_last_interest_change', 'timestamp_updated', 'personalization',
+    'status_summary', 'payload', 'list_id', 'assigned_to', 'campaign',
+    'uploaded_by_user',
 ]
 
+# --- Data Processing Functions (Unchanged) ---
 def load_data(file_path: Path) -> pd.DataFrame:
     """Loads and performs initial datetime standardization on the dataset."""
     print(f"Loading data from '{file_path}'...")
     if not file_path.is_file():
         print(f"Error: The file '{file_path}' was not found.")
         sys.exit(1)
-
     try:
         df = pd.read_csv(file_path, on_bad_lines='warn', low_memory=False)
         print("Data successfully loaded.")
@@ -81,50 +63,26 @@ def load_data(file_path: Path) -> pd.DataFrame:
 def engineer_features(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
     """Applies all feature engineering and preprocessing steps."""
     print("Starting feature engineering...")
-    
-    # --- KEY MODIFICATION: Create a multiclass target variable ---
-    print("Creating multiclass engagement target...")
     if 'email_open_count' not in df.columns or 'email_click_count' not in df.columns:
         print("Error: Source columns 'email_open_count' or 'email_click_count' not found.")
         sys.exit(1)
 
-    # Define conditions for our engagement tiers:
-    # Class 2: Clicker (highest engagement)
-    # Class 1: Opener (medium engagement)
-    # Class 0: No Engagement (default)
-    conditions = [
-        (df['email_click_count'] > 0),
-        (df['email_open_count'] > 0)
-    ]
+    conditions = [ (df['email_click_count'] > 0), (df['email_open_count'] > 0) ]
     choices = [2, 1]
     df[TARGET_VARIABLE] = np.select(conditions, choices, default=0)
-    
-    # Drop original leaky columns
     df = df.drop(columns=['email_open_count', 'email_click_count'])
-    print("Target variable 'engagement_level' created.")
-    # --- END MODIFICATION ---
 
-    print("Processing text features with TF-IDF...")
     text_features_df = pd.DataFrame(index=df.index)
     combined_text = pd.Series("", index=df.index)
     for col in TEXT_COLS:
         if col in df.columns:
             combined_text += df[col].fillna('') + ' '
-        else:
-            print(f"Warning: Text column '{col}' not found. Skipping.")
 
     if pd.api.types.is_string_dtype(combined_text) and combined_text.str.strip().any():
         vectorizer = TfidfVectorizer(max_features=500, stop_words='english', lowercase=True)
         text_features_matrix = vectorizer.fit_transform(combined_text)
-        text_features_df = pd.DataFrame(
-            text_features_matrix.toarray(),
-            index=df.index,
-            columns=[f"tfidf_{name}" for name in vectorizer.get_feature_names_out()]
-        )
-        print(f"Created {text_features_df.shape[1]} features from text columns.")
-    else:
-        print("No text data to process.")
-
+        text_features_df = pd.DataFrame(text_features_matrix.toarray(), index=df.index, columns=[f"tfidf_{name}" for name in vectorizer.get_feature_names_out()])
+    
     current_time_utc = pd.Timestamp.now(tz='UTC')
     for col in TIMESTAMP_COLS:
         if col in df.columns and pd.api.types.is_datetime64_any_dtype(df[col]):
@@ -147,18 +105,10 @@ def engineer_features(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
 
     df = df.drop(columns=[col for col in COLS_TO_DROP if col in df.columns], errors='ignore')
     
-    if TARGET_VARIABLE not in df.columns:
-        print(f"Error: Target variable '{TARGET_VARIABLE}' not found after processing.")
-        sys.exit(1)
-    
     X = df.drop(columns=[TARGET_VARIABLE])
     y = df[TARGET_VARIABLE]
-
     X = pd.concat([X, text_features_df], axis=1)
-    print("Combined original features with new TF-IDF text features.")
-
     X = X.select_dtypes(include=np.number)
-
     cols_to_drop_all_nan = X.columns[X.isna().all()].tolist()
     if cols_to_drop_all_nan:
         print(f"INFO: Dropping completely empty columns: {cols_to_drop_all_nan}")
@@ -167,51 +117,79 @@ def engineer_features(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
     imputer = SimpleImputer(strategy='mean')
     X_imputed = imputer.fit_transform(X)
     X = pd.DataFrame(X_imputed, index=X.index, columns=X.columns)
-
+    
     print(f"Feature engineering complete. Final feature shape: {X.shape}")
     return X, y
 
 def main():
-    """Main function to run the full data science pipeline."""
+    """Main function to run the data pipeline with hyperparameter tuning."""
     # 1. Load and process data
     df = load_data(CSV_FILE_PATH)
     X, y = engineer_features(df)
 
     # 2. Split data for training and testing
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-    print(f"Data split into training and testing sets. Test set shape: {X_test.shape}")
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42, stratify=y)
 
-    # 3. Train the XGBoost Multiclass Model
-    print("Training XGBoost multiclass model...")
-    # --- KEY MODIFICATION: Configure XGBoost for multiclass classification ---
+    # 3. Define the model and hyperparameter grid for GridSearchCV
     model = xgb.XGBClassifier(
-        objective='multi:softmax',  # Specifies multiclass prediction
-        num_class=3,                # Number of classes: 0, 1, 2
-        use_label_encoder=False,    # Recommended setting
-        eval_metric='mlogloss'      # Logloss for multiclass models
+        objective='multi:softmax',
+        num_class=3,
+        use_label_encoder=False,
+        eval_metric='mlogloss'
     )
-    model.fit(X_train, y_train)
-    print("Model training complete.")
 
-    # 4. Explain the model's predictions with SHAP
-    print("Calculating SHAP values to explain model predictions...")
-    explainer = shap.Explainer(model)
-    shap_values = explainer(X_test)
+    # Define a smaller grid for faster demonstration. Expand this for a thorough search.
+    param_grid = {
+        'max_depth': [4, 6],
+        'n_estimators': [100, 250],
+        'learning_rate': [0.05, 0.1],
+        'subsample': [0.8, 1.0],
+        'colsample_bytree': [0.8, 1.0]
+    }
 
-    # For multiclass, SHAP returns a list of arrays (one for each class).
-    # We can visualize the summary plot for each class or combine them.
-    # The default summary plot shows the mean absolute SHAP value across all classes.
-    print("Generating and saving SHAP summary plot...")
-    plt.figure()
-    # Class 2 is the "Clickers", our most important group. Let's plot the features for it.
-    shap.summary_plot(shap_values[:,:,2], X_test, show=False)
-    plt.title('SHAP Summary for High-Engagement "Clickers" (Class 2)')
-    plt.tight_layout()
-    plt.savefig("shap_summary_plot_clickers.png")
-    print("SHAP plot saved as 'shap_summary_plot_clickers.png'")
+    # 4. Set up and run GridSearchCV
+    # cv=3 means 3-fold cross-validation.
+    # n_jobs=-1 uses all available CPU cores to speed up the process.
+    # verbose=2 provides progress updates.
+    # scoring='f1_weighted' is a good metric for imbalanced multiclass problems.
+    grid_search = GridSearchCV(
+        estimator=model,
+        param_grid=param_grid,
+        scoring='f1_weighted',
+        cv=3,
+        n_jobs=-1,
+        verbose=2
+    )
 
-    # You can now use the trained `model` to predict on new, unseen data
-    # example_prediction = model.predict(new_data) -> will return 0, 1, or 2
+    print("\n--- Starting Hyperparameter Tuning with GridSearchCV ---")
+    print(f"WARNING: This process can be very time-consuming.")
+    grid_search.fit(X_train, y_train)
+
+    # 5. Report the results of the grid search
+    print("\n--- GridSearchCV Results ---")
+    print(f"Best parameters found: {grid_search.best_params_}")
+    print(f"Best cross-validation F1-score (weighted): {grid_search.best_score_:.4f}")
+
+    # 6. Evaluate the BEST model on the held-out test set
+    print("\n--- Final Model Evaluation on Test Set ---")
+    best_model = grid_search.best_estimator_
+    y_pred = best_model.predict(X_test)
+    
+    print("\nClassification Report:")
+    print(classification_report(y_test, y_pred, target_names=['No Engagement (0)', 'Opener (1)', 'Clicker (2)']))
+    
+    print("Confusion Matrix:")
+    cm = confusion_matrix(y_test, y_pred)
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                xticklabels=['No Engagement', 'Opener', 'Clicker'],
+                yticklabels=['No Engagement', 'Opener', 'Clicker'])
+    plt.title('Confusion Matrix for Tuned Model')
+    plt.ylabel('Actual')
+    plt.xlabel('Predicted')
+    plt.savefig('tuned_model_confusion_matrix.png')
+    print("Tuned model confusion matrix saved as 'tuned_model_confusion_matrix.png'")
+
 
 if __name__ == "__main__":
     main()

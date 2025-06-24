@@ -1,0 +1,16 @@
+# Virtual environment
+venv/
+__pycache__/
+*.pyc
+
+# Data files
+instantly_campaigns_with_emails.csv
+enriched_contacts.csv
+instantly_campaigns.json
+merged_contacts.csv
+
+# Credentials
+creds.txt
+
+# VS Code
+.vscode/

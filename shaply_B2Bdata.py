@@ -17,7 +17,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from typing import Tuple
 
 # --- Configuration ---
-CSV_FILE_PATH = Path("enriched_contacts.csv")
+CSV_FILE_PATH = Path("merged_contacts.csv")
 # MODIFIED: Changed target variable to reflect multiclass goal
 TARGET_VARIABLE = "engagement_level"
 

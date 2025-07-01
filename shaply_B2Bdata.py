@@ -43,7 +43,7 @@ CATEGORICAL_COLS = [
 JSONB_COLS = ['employment_history', 'organization_data', 'account_data', 'api_response_raw']
 
 COLS_TO_DROP = [
-    'id', 'email', 'first_name', 'last_name', 'company_name', 'linkedin_url',
+    'id', 'email_clicked_variant', 'email_clicked_step', 'email', 'first_name', 'last_name', 'company_name', 'linkedin_url',
     'website', 'headline', 'company_domain', 'phone', 'apollo_id',
     'apollo_name', 'organization', 'photo_url', 'organization_name',
     'organization_website', 'organization_phone',

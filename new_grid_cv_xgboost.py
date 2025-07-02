@@ -54,39 +54,47 @@ COLS_TO_DROP = [
 
 # --- Data Loading ---
 def load_data(file_path: Path) -> pd.DataFrame:
-    """Loads and performs initial datetime standardization on the dataset."""
+    """
+    Loads and performs initial datetime standardization on the dataset.
+    """
     print(f"Loading data from '{file_path}'...")
     if not file_path.is_file():
         print(f"Error: The file '{file_path}' was not found.")
         sys.exit(1)
-    
+
     df = pd.read_csv(file_path, on_bad_lines='warn', low_memory=False)
     print("Data successfully loaded.")
 
-    # Standardize all potential timestamp columns to UTC
+    # Standardize all potential timestamp columns to UTC to ensure consistency
     all_potential_timestamps = list(set(TIMESTAMP_COLS + [col for col in COLS_TO_DROP if 'timestamp' in col]))
     for col in all_potential_timestamps:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors='coerce')
     for col in df.select_dtypes(include=['datetime64[ns]']).columns:
-            df[col] = df[col].dt.tz_localize('UTC', nonexistent='NaT')
+        df[col] = df[col].dt.tz_localize('UTC', nonexistent='NaT')
     for col in df.select_dtypes(include=['datetime64[ns, UTC]']).columns:
-            if df[col].dt.tz != 'UTC':
-                df[col] = df[col].dt.tz_convert('UTC')
+        if df[col].dt.tz != 'UTC':
+            df[col] = df[col].dt.tz_convert('UTC')
     return df
 
 # --- Feature Engineering ---
 def engineer_features(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
-    """Applies feature engineering steps that do not involve fitting to data."""
+    """
+    Applies all feature engineering steps and correctly separates features (X) and target (y).
+    """
     print("Starting feature engineering...")
 
-    # 1. Define Target Variable
-    if 'email_open_count' not in df.columns or 'email_click_count' not in df.columns:
-        print("Error: Source columns 'email_open_count' or 'email_click_count' not found.")
+    # 1. Define Target Variable: 3-tier system where clicks and replies are bucketed
+    if 'email_reply_count' not in df.columns or 'email_click_count' not in df.columns or 'email_open_count' not in df.columns:
+        print("Error: Source columns for engagement level ('email_reply_count', 'email_click_count', 'email_open_count') not found.")
         sys.exit(1)
-    conditions = [(df['email_click_count'] > 0), (df['email_open_count'] > 0)]
+
+    conditions = [
+        ((df['email_click_count'] > 0) | (df['email_reply_count'] > 0)),  # Tier 2: Click OR Reply
+        (df['email_open_count'] > 0)                                       # Tier 1: Open
+    ]
     choices = [2, 1]
-    df[TARGET_VARIABLE] = np.select(conditions, choices, default=0)
+    df[TARGET_VARIABLE] = np.select(conditions, choices, default=0)         # Tier 0: No Engagement
 
     # 2. Combine Text Columns for later vectorization
     df['combined_text'] = ""
@@ -94,7 +102,7 @@ def engineer_features(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
         if col in df.columns:
             df['combined_text'] += df[col].fillna('') + ' '
 
-    # 3. Engineer Timestamp Features
+    # 3. Engineer Timestamp Features without data leakage
     if 'timestamp_created' in df.columns and pd.api.types.is_datetime64_any_dtype(df['timestamp_created']):
         ref_date = df['timestamp_created']
         for col in TIMESTAMP_COLS:
@@ -107,12 +115,15 @@ def engineer_features(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
         if col in df.columns:
             df[f'has_{col}'] = df[col].notna().astype(int)
 
-    # 5. Correctly separate features (X) and target (y)
+    # 5. Correctly separate features (X) and target (y) to prevent errors
+    # FIRST: Secure the target variable 'y' BEFORE it can be dropped.
     y = df[TARGET_VARIABLE]
-    
-    all_source_cols = ['email_open_count', 'email_click_count']
+
+    # SECOND: Define the full list of ALL columns to drop from the feature set 'X'.
+    all_source_cols = ['email_open_count', 'email_click_count', 'email_reply_count']
     all_cols_to_drop = list(set(COLS_TO_DROP + TIMESTAMP_COLS + JSONB_COLS + TEXT_COLS_FOR_FEATURE + all_source_cols + [TARGET_VARIABLE]))
-    
+
+    # THIRD: Define the feature set 'X' by dropping all unnecessary columns.
     X = df.drop(columns=[col for col in all_cols_to_drop if col in df.columns], errors='ignore')
 
     print(f"Feature engineering complete. Shape before pipeline: {X.shape}")

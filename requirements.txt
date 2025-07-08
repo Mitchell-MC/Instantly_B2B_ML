@@ -6,6 +6,9 @@ numpy==1.26.4
 scikit-learn==1.5.0
 xgboost==2.0.3
 
+# Deep Learning
+tensorflow==2.15.0
+
 # Model Interpretation and Visualization
 shap==0.45.1
 matplotlib==3.9.0

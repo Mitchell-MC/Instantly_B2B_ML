@@ -89,7 +89,7 @@ def engineer_features(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
         sys.exit(1)
 
     # Define conditions for our engagement tiers:
-    # Class 2: Clicker (highest engagement)
+    # Class 2: Clicker (highest engagement, clicks on link and/or replies)
     # Class 1: Opener (medium engagement)
     # Class 0: No Engagement (default)
     conditions = [

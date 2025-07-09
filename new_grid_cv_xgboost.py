@@ -22,6 +22,7 @@ from typing import Tuple
 # Import pipeline and SMOTE from imbalanced-learn
 from imblearn.pipeline import Pipeline as ImbPipeline
 from imblearn.over_sampling import SMOTE
+from imblearn.combine import SMOTETomek
 
 # --- Configuration ---
 CSV_FILE_PATH = Path("merged_contacts.csv")
@@ -33,7 +34,7 @@ JSONB_COLS = ['employment_history', 'organization_data', 'account_data', 'api_re
 
 # List of columns to drop due to leakage, irrelevance, or being empty
 COLS_TO_DROP = [
-    # Identifiers and PII
+    # General/ Personal Identifiers
     'id', 'email', 'first_name', 'last_name', 'company_name', 'linkedin_url',
     'website', 'headline', 'company_domain', 'phone', 'apollo_id',
     'apollo_name', 'organization', 'photo_url', 'organization_name',
@@ -104,6 +105,8 @@ def engineer_features(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
 
     # 3. Engineer Timestamp Features without data leakage
     if 'timestamp_created' in df.columns and pd.api.types.is_datetime64_any_dtype(df['timestamp_created']):
+        df['created_day_of_week'] = df['timestamp_created'].dt.dayofweek
+        df['created_month'] = df['timestamp_created'].dt.month
         ref_date = df['timestamp_created']
         for col in TIMESTAMP_COLS:
             if col in df.columns and col != 'timestamp_created' and pd.api.types.is_datetime64_any_dtype(df[col]):
@@ -164,15 +167,16 @@ def main():
 
     # 4. Create the full pipeline with preprocessor, SMOTE, and model
     model_pipeline = ImbPipeline(steps=[
-        ('preprocessor', preprocessor),
-        ('smote', SMOTE(random_state=42)),
-        ('classifier', xgb.XGBClassifier(
-            objective='multi:softmax',
-            num_class=3,
-            eval_metric='mlogloss',
-            use_label_encoder=False
-        ))
-    ])
+    ('preprocessor', preprocessor),
+    # Replace SMOTE with SMOTETomek
+    ('sampler', SMOTETomek(random_state=42)),
+    ('classifier', xgb.XGBClassifier(
+        objective='multi:softmax',
+        num_class=3,
+        eval_metric='mlogloss',
+        use_label_encoder=False
+    ))
+])
     
     # 5. Define hyperparameter grid for RandomizedSearchCV
     param_distributions = {
@@ -190,7 +194,7 @@ def main():
         n_iter=25, # Test 25 random combinations
         scoring='f1_macro', # Focus on performance across all classes
         cv=5, # Use 5-fold cross-validation
-        n_jobs=-1,
+        n_jobs=5,
         verbose=2,
         random_state=42
     )
@@ -218,8 +222,8 @@ def main():
     plt.title('Confusion Matrix for Final Tuned Model')
     plt.ylabel('Actual')
     plt.xlabel('Predicted')
-    plt.savefig('final_confusion_matrix.png')
-    print("Confusion matrix plot saved as 'final_confusion_matrix.png'")
+    plt.savefig('ultimate_confusion_matrix.png')
+    print("Confusion matrix plot saved as 'ultimate_confusion_matrix.png'")
     plt.show()
 
 if __name__ == "__main__":

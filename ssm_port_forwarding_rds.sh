@@ -2,7 +2,7 @@
 set -ex
 
 REGION="us-east-1"
-INSTANCE_ID="i-06a1b05741e4930ce" # b2b_leads_ssh_tunnel
+INSTANCE_ID="i-074ff6482997c99a1" # b2b_leads_ssh_tunnel
 REMOTE_PORT="5432" # Port on EC2 where Postgres runs
 LOCAL_PORT="5431" # Local port to forward to
 PROFILE="beamdata-dev" # Replace with your AWS CLI profile

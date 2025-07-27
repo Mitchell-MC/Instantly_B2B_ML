@@ -1,0 +1,279 @@
+{
+  "eda": {
+    "numerical_columns": 25,
+    "high_missing_columns": 30,
+    "moderate_missing_columns": 8,
+    "avg_missing_rate": 33.451683297256395
+  },
+  "statistical_analysis": {
+    "status_x": {
+      "mean": 2.3427701330927135,
+      "median": 3.0,
+      "std": 0.9673771249924364,
+      "skewness": -0.9459468192153758,
+      "kurtosis": -0.3388050178124775,
+      "q1": 1.0,
+      "q3": 3.0,
+      "iqr": 2.0
+    },
+    "email_open_count": {
+      "mean": 1.2058801413640123,
+      "median": 0.0,
+      "std": 1.7025113690320244,
+      "skewness": 2.0514782544565286,
+      "kurtosis": 9.952577580477657,
+      "q1": 0.0,
+      "q3": 2.0,
+      "iqr": 2.0
+    },
+    "email_reply_count": {
+      "mean": 0.0006015489886457628,
+      "median": 0.0,
+      "std": 0.024519578524704017,
+      "skewness": 40.737731679290896,
+      "kurtosis": 1657.6874298932178,
+      "q1": 0.0,
+      "q3": 0.0,
+      "iqr": 0.0
+    },
+    "email_click_count": {
+      "mean": 0.09241296338070532,
+      "median": 0.0,
+      "std": 0.49003488208536883,
+      "skewness": 18.1235144136527,
+      "kurtosis": 721.9399969287082,
+      "q1": 0.0,
+      "q3": 0.0,
+      "iqr": 0.0
+    },
+    "esp_code": {
+      "mean": 220.24134300861,
+      "median": 2.0,
+      "std": 412.0511772228609,
+      "skewness": 1.360975901204294,
+      "kurtosis": -0.1476530020697555,
+      "q1": 1.0,
+      "q3": 8.0,
+      "iqr": 7.0
+    },
+    "page_retrieved": {
+      "mean": 133.49003684487556,
+      "median": 133.0,
+      "std": 76.78277670579925,
+      "skewness": 2.8586547112256318e-06,
+      "kurtosis": -1.2000299948809496,
+      "q1": 67.0,
+      "q3": 200.0,
+      "iqr": 133.0
+    },
+    "email_opened_step": {
+      "mean": 0.1909535648408052,
+      "median": 0.0,
+      "std": 0.47863727884438156,
+      "skewness": 2.5662564635900544,
+      "kurtosis": 6.066003170907377,
+      "q1": 0.0,
+      "q3": 0.0,
+      "iqr": 0.0
+    },
+    "email_opened_variant": {
+      "mean": 0.13545593070815623,
+      "median": 0.0,
+      "std": 0.342223631853593,
+      "skewness": 2.1307853508487025,
+      "kurtosis": 2.540653700897069,
+      "q1": 0.0,
+      "q3": 0.0,
+      "iqr": 0.0
+    }
+  },
+  "source_analysis": {
+    "web_scraping": [
+      "timestamp_created_x",
+      "timestamp_updated_x",
+      "timestamp_last_contact",
+      "timestamp_last_touch",
+      "retrieval_timestamp",
+      "timestamp_last_open",
+      "timestamp_last_click",
+      "timestamp_last_reply",
+      "timestamp_last_interest_change",
+      "linkedin_url",
+      "photo_url",
+      "timestamp_created_y",
+      "timestamp_updated_y"
+    ],
+    "human_input": [
+      "email_open_count",
+      "email_reply_count",
+      "email_click_count",
+      "company_domain",
+      "email",
+      "last_name",
+      "first_name",
+      "company_name",
+      "email_opened_step",
+      "email_opened_variant",
+      "phone",
+      "email_clicked_step",
+      "email_clicked_variant",
+      "email_replied_step",
+      "email_replied_variant",
+      "apollo_name",
+      "organization_name",
+      "organization_phone",
+      "email_subjects",
+      "email_bodies",
+      "email_gap",
+      "email_list",
+      "email_tag_list",
+      "name",
+      "stop_for_company"
+    ],
+    "api_data": [
+      "payload",
+      "api_response_raw",
+      "api_status"
+    ]
+  },
+  "outlier_handling": {
+    "status_x": {
+      "iqr_outliers": "21",
+      "zscore_outliers": "131",
+      "isolation_outliers": "8583",
+      "total_records": 26598
+    },
+    "email_open_count": {
+      "iqr_outliers": "611",
+      "zscore_outliers": "283",
+      "isolation_outliers": "12469",
+      "total_records": 26598
+    },
+    "email_reply_count": {
+      "iqr_outliers": "16",
+      "zscore_outliers": "16",
+      "isolation_outliers": "16",
+      "total_records": 26598
+    },
+    "email_click_count": {
+      "iqr_outliers": "1668",
+      "zscore_outliers": "468",
+      "isolation_outliers": "1668",
+      "total_records": 26598
+    },
+    "esp_code": {
+      "iqr_outliers": "5817",
+      "zscore_outliers": "0",
+      "isolation_outliers": "8773",
+      "total_records": 26597
+    },
+    "page_retrieved": {
+      "iqr_outliers": "0",
+      "zscore_outliers": "0",
+      "isolation_outliers": "18198",
+      "total_records": 26598
+    },
+    "email_opened_step": {
+      "iqr_outliers": "1926",
+      "zscore_outliers": "445",
+      "isolation_outliers": "1926",
+      "total_records": 12469
+    },
+    "email_opened_variant": {
+      "iqr_outliers": "1689",
+      "zscore_outliers": "0",
+      "isolation_outliers": "1689",
+      "total_records": 12469
+    },
+    "email_clicked_step": {
+      "iqr_outliers": "6",
+      "zscore_outliers": "6",
+      "isolation_outliers": "460",
+      "total_records": 1668
+    },
+    "email_clicked_variant": {
+      "iqr_outliers": "148",
+      "zscore_outliers": "148",
+      "isolation_outliers": "148",
+      "total_records": 1668
+    },
+    "email_replied_step": {
+      "iqr_outliers": "0",
+      "zscore_outliers": "0",
+      "isolation_outliers": "10",
+      "total_records": 16
+    },
+    "email_replied_variant": {
+      "iqr_outliers": "3",
+      "zscore_outliers": "0",
+      "isolation_outliers": "3",
+      "total_records": 16
+    },
+    "lt_interest_status": {
+      "iqr_outliers": "0",
+      "zscore_outliers": "0",
+      "isolation_outliers": "24",
+      "total_records": 63
+    },
+    "enrichment_status": {
+      "iqr_outliers": "0",
+      "zscore_outliers": "0",
+      "isolation_outliers": "3",
+      "total_records": 11
+    },
+    "organization_employees": {
+      "iqr_outliers": "5023",
+      "zscore_outliers": "136",
+      "isolation_outliers": "4504",
+      "total_records": 24433
+    },
+    "organization_founded_year": {
+      "iqr_outliers": "2518",
+      "zscore_outliers": "427",
+      "isolation_outliers": "6276",
+      "total_records": 22141
+    },
+    "credits_consumed": {
+      "iqr_outliers": "75",
+      "zscore_outliers": "75",
+      "isolation_outliers": "75",
+      "total_records": 25440
+    },
+    "daily_limit": {
+      "iqr_outliers": "7027",
+      "zscore_outliers": "274",
+      "isolation_outliers": "7749",
+      "total_records": 24472
+    },
+    "email_gap": {
+      "iqr_outliers": "0",
+      "zscore_outliers": "0",
+      "isolation_outliers": "652",
+      "total_records": 652
+    },
+    "status_y": {
+      "iqr_outliers": "0",
+      "zscore_outliers": "0",
+      "isolation_outliers": "6812",
+      "total_records": 24487
+    }
+  },
+  "smoothing": {
+    "temporal_features_created": 13,
+    "smoothing_applied": 5
+  },
+  "feature_engineering": {
+    "binned_features": 4,
+    "pca_components": 0,
+    "interaction_features": 1
+  },
+  "final_cleaning": {
+    "final_shape": [
+      26598,
+      126
+    ],
+    "quality_score": 96.74426529265239,
+    "duplicates_removed": 0,
+    "missing_imputed": "713135"
+  }
+}

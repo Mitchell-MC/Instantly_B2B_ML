@@ -11,6 +11,6 @@ merged_contacts.csv
 
 # Credentials
 creds.txt
-
+*.csv
 # VS Code
 .vscode/

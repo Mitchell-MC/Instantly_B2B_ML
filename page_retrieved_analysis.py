@@ -69,10 +69,10 @@ def analyze_page_retrieved():
     print("\n5. PAGE RANGE ANALYSIS:")
     print("-" * 50)
     
-    # Create page ranges
+    # Create realistic page ranges (as if these were actual search result pages)
     df['page_range'] = pd.cut(df['page_retrieved'], 
-                              bins=[0, 50, 100, 150, 200, 266], 
-                              labels=['1-50', '51-100', '101-150', '151-200', '201-266'],
+                              bins=[0, 5, 10, 20, 50, 266], 
+                              labels=['Pages 1-5', 'Pages 6-10', 'Pages 11-20', 'Pages 21-50', 'Pages 50+'],
                               include_lowest=True)
     
     range_performance = df.groupby('page_range')['email_open_count'].agg([
@@ -89,11 +89,12 @@ def analyze_page_retrieved():
     print("-" * 50)
     
     print("Based on the analysis, 'page_retrieved' likely indicates:")
-    print("• The page number or position where contact data was retrieved from")
-    print("• Could represent search result position (e.g., Google search page)")
-    print("• May indicate data source depth or quality")
-    print("• Lower numbers = higher quality/more relevant results")
-    print("• Higher numbers = deeper search results or less relevant")
+    print("• Data collection batch number (1-266 batches of ~100 contacts each)")
+    print("• Could represent search result page position from data source")
+    print("• May indicate data collection sequence or source quality")
+    print("• Lower page numbers (1-5) = first/highest quality results")
+    print("• Medium page numbers (6-20) = standard quality results")
+    print("• Higher page numbers (50+) = deeper/potentially lower quality results")
     
     # Business insights
     print("\n7. BUSINESS INSIGHTS:")
@@ -114,30 +115,40 @@ def analyze_page_retrieved():
     print("\n8. PAGE QUALITY ANALYSIS:")
     print("-" * 50)
     
-    # Analyze if lower page numbers perform better
-    low_pages = df[df['page_retrieved'] <= 50]
-    high_pages = df[df['page_retrieved'] > 200]
+    # Analyze if lower page numbers perform better (realistic ranges)
+    premium_pages = df[df['page_retrieved'] <= 5]      # First 5 pages
+    standard_pages = df[(df['page_retrieved'] >= 6) & (df['page_retrieved'] <= 20)]  # Pages 6-20
+    deep_pages = df[df['page_retrieved'] > 50]         # Beyond page 50
     
-    low_page_rate = low_pages['email_open_count'].mean()
-    high_page_rate = high_pages['email_open_count'].mean()
+    premium_rate = premium_pages['email_open_count'].mean()
+    standard_rate = standard_pages['email_open_count'].mean()
+    deep_rate = deep_pages['email_open_count'].mean()
     
-    print(f"• Low pages (1-50): {low_page_rate:.3f} opens/contact ({len(low_pages):,} contacts)")
-    print(f"• High pages (201-266): {high_page_rate:.3f} opens/contact ({len(high_pages):,} contacts)")
+    print(f"• Premium pages (1-5): {premium_rate:.3f} opens/contact ({len(premium_pages):,} contacts)")
+    print(f"• Standard pages (6-20): {standard_rate:.3f} opens/contact ({len(standard_pages):,} contacts)")
+    print(f"• Deep pages (50+): {deep_rate:.3f} opens/contact ({len(deep_pages):,} contacts)")
     
-    if low_page_rate > high_page_rate:
-        print(f"• Low pages perform {((low_page_rate/high_page_rate)-1)*100:.1f}% better")
+    # Performance comparison
+    if premium_rate > deep_rate:
+        print(f"• Premium pages perform {((premium_rate/deep_rate)-1)*100:.1f}% better than deep pages")
     else:
-        print(f"• High pages perform {((high_page_rate/low_page_rate)-1)*100:.1f}% better")
+        print(f"• Deep pages perform {((deep_rate/premium_rate)-1)*100:.1f}% better than premium pages")
+    
+    if premium_rate > standard_rate:
+        print(f"• Premium pages perform {((premium_rate/standard_rate)-1)*100:.1f}% better than standard pages")
+    else:
+        print(f"• Standard pages perform {((standard_rate/premium_rate)-1)*100:.1f}% better than premium pages")
     
     # Recommendations
     print("\n9. RECOMMENDATIONS:")
     print("-" * 50)
     
-    print("• Focus on contacts from lower page numbers (1-100) for better quality")
-    print("• Avoid contacts from very high page numbers (200+) as they may be low quality")
-    print("• Use page_retrieved as a proxy for contact relevance/quality")
-    print("• Consider page position when prioritizing campaign targets")
-    print("• Lower page numbers likely indicate more relevant search results")
+    print("• Prioritize contacts from premium pages (1-5) for highest quality campaigns")
+    print("• Use standard pages (6-20) for regular outreach campaigns")
+    print("• Be cautious with deep pages (50+) - test performance before large campaigns")
+    print("• Use page_retrieved as a quality indicator when segmenting contacts")
+    print("• Consider page position when setting campaign expectations and budgets")
+    print("• Monitor performance differences between page ranges to optimize sourcing strategy")
 
 if __name__ == "__main__":
     analyze_page_retrieved() 

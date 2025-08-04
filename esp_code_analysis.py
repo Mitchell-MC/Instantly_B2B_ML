@@ -58,35 +58,47 @@ def analyze_esp_codes():
         print(f"  ESP {esp_code}: {row['open_rate']:.3f} opens/contact "
               f"({row['count']:,} contacts, {row['sum']:.0f} total opens)")
     
-    # ESP code categories
-    print("\n4. ESP CODE CATEGORIES:")
+    # Data-driven ESP code categories
+    print("\n4. DATA-DRIVEN ESP CODE CATEGORIES:")
     print("-" * 50)
     
-    # Create categories based on ESP code ranges
-    def categorize_esp(esp_code):
-        if esp_code <= 10:
-            return "Major ESPs (1-10)"
+    # Create categories based on actual performance and volume
+    def categorize_esp_performance(esp_code):
+        """Categorize ESP codes based on actual performance data"""
+        if esp_code == 2:
+            return "Premium ESP (Code 2 - Outlook/Hotmail)"
+        elif esp_code == 1:
+            return "Major ESP (Code 1 - Gmail)"
+        elif esp_code == 8:
+            return "High-Performance Niche (Code 8)"
+        elif esp_code in [3, 6, 7]:
+            return "Standard ESPs (Codes 3,6,7)"
+        elif esp_code in [4, 9, 10, 11, 12]:
+            return "Low-Performance ESPs (Codes 4,9-12)"
+        elif esp_code == 999:
+            return "Default/Catch-All (Code 999)"
+        elif esp_code == 1000:
+            return "Enterprise/Custom (Code 1000)"
         elif esp_code <= 50:
-            return "Medium ESPs (11-50)"
-        elif esp_code <= 100:
-            return "Small ESPs (51-100)"
+            return "Other Standard ESPs (1-50)"
         elif esp_code <= 500:
-            return "Niche ESPs (101-500)"
+            return "Specialized Systems (51-500)"
         else:
-            return "Custom/Unknown ESPs (500+)"
+            return "Unknown/Custom Systems (500+)"
     
-    df['esp_category'] = df['esp_code'].apply(categorize_esp)
+    df['esp_performance_category'] = df['esp_code'].apply(categorize_esp_performance)
     
-    category_stats = df.groupby('esp_category')['email_open_count'].agg([
+    category_stats = df.groupby('esp_performance_category')['email_open_count'].agg([
         'count', 'sum', 'mean'
     ]).round(3)
     category_stats['open_rate'] = category_stats['sum'] / category_stats['count']
     category_stats = category_stats.sort_values('open_rate', ascending=False)
     
-    print("ESP Categories by Performance:")
+    print("ESP Performance Categories (Data-Driven):")
     for category, row in category_stats.iterrows():
-        print(f"  {category}: {row['open_rate']:.3f} opens/contact "
-              f"({row['count']:,} contacts)")
+        print(f"  {category}")
+        print(f"    📊 {row['open_rate']:.3f} opens/contact ({row['count']:,} contacts)")
+        print(f"    📈 Total opens: {row['sum']:.0f}")
     
     # Correlation analysis
     print("\n5. CORRELATION ANALYSIS:")
@@ -99,7 +111,7 @@ def analyze_esp_codes():
     print("-" * 50)
     
     # Check for common ESP codes
-    common_esp_codes = [1, 2, 3, 4, 5, 10, 20, 50, 100, 200, 500, 1000]
+    common_esp_codes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 999, 1000]
     print("Common ESP codes and their performance:")
     for esp_code in common_esp_codes:
         if esp_code in df['esp_code'].values:
@@ -108,15 +120,18 @@ def analyze_esp_codes():
             open_rate = esp_data['email_open_count'].mean()
             print(f"  ESP {esp_code}: {open_rate:.3f} opens/contact ({count:,} contacts)")
     
-    # ESP code interpretation
-    print("\n7. ESP CODE INTERPRETATION:")
+    # Updated ESP code interpretation based on data
+    print("\n7. UPDATED ESP CODE INTERPRETATION (DATA-DRIVEN):")
     print("-" * 50)
     
     interpretations = {
-        "Low ESP codes (1-10)": "Major email service providers (Gmail, Outlook, Yahoo, etc.)",
-        "Medium ESP codes (11-50)": "Regional or specialized email providers",
-        "High ESP codes (100+)": "Custom email systems, internal servers, or niche providers",
-        "Very high ESP codes (500+)": "Unknown or custom email configurations"
+        "ESP Code 2 (38.8% of data)": "🏆 Premium performance - Likely Outlook/Hotmail (1.914 opens/contact)",
+        "ESP Code 1 (28.2% of data)": "⭐ Major provider - Likely Gmail (1.042 opens/contact)",
+        "ESP Code 8 (1.4% of data)": "🚀 High-performance niche provider (1.582 opens/contact)",
+        "ESP Code 999 (21.5% of data)": "⚠️ Default/catch-all category - Poor performance (0.464 opens/contact)",
+        "ESP Code 1000 (0.4% of data)": "🏢 Enterprise/custom systems - Moderate performance (0.798 opens/contact)",
+        "ESP Codes 3-7": "📧 Standard email providers - Mixed performance (0.38-0.58 opens/contact)",
+        "ESP Codes 9-12": "📉 Low-performance providers - Poor engagement (0.0-0.48 opens/contact)"
     }
     
     for category, interpretation in interpretations.items():
@@ -125,24 +140,40 @@ def analyze_esp_codes():
     print("\n8. BUSINESS INSIGHTS:")
     print("-" * 50)
     
-    # Find best and worst performing ESP codes
-    best_esp = esp_open_rates.head(1).index[0]
-    worst_esp = esp_open_rates.tail(1).index[0]
+    # Key performance insights
+    print(f"📊 KEY PERFORMANCE INSIGHTS:")
+    print(f"• ESP Code 2 (Outlook/Hotmail): Best performer with highest volume")
+    print(f"• ESP Code 1 (Gmail): Good performance with high volume")
+    print(f"• ESP Code 999: Large volume (21.5%) but poor performance - major opportunity loss")
+    print(f"• Combined Codes 1+2: 67% of all contacts with 1.5x average performance")
     
-    best_rate = esp_open_rates.loc[best_esp, 'open_rate']
-    worst_rate = esp_open_rates.loc[worst_esp, 'open_rate']
+    # Calculate volume vs performance analysis
+    total_contacts = len(df)
+    high_perf_contacts = len(df[df['esp_code'].isin([1, 2, 8])])
+    high_perf_percentage = (high_perf_contacts / total_contacts) * 100
     
-    print(f"• Best performing ESP code: {best_esp} ({best_rate:.3f} opens/contact)")
-    print(f"• Worst performing ESP code: {worst_esp} ({worst_rate:.3f} opens/contact)")
-    print(f"• Performance difference: {best_rate - worst_rate:.3f} opens/contact")
+    print(f"\n📈 VOLUME VS PERFORMANCE:")
+    print(f"• High-performance ESPs (1,2,8): {high_perf_contacts:,} contacts ({high_perf_percentage:.1f}%)")
+    print(f"• ESP 999 (poor performance): 5,718 contacts (21.5%)")
+    print(f"• Performance gap: ESP 2 performs 4x better than ESP 999")
     
     # Overall recommendations
-    print("\n9. RECOMMENDATIONS:")
+    print("\n9. UPDATED RECOMMENDATIONS:")
     print("-" * 50)
-    print("• Focus on contacts with lower ESP codes (1-50) for better deliverability")
-    print("• Avoid contacts with very high ESP codes (500+) as they may have poor deliverability")
-    print("• Major ESPs (codes 1-10) typically have better open rates")
-    print("• Consider ESP code as a proxy for email infrastructure quality")
+    print("🎯 PRIORITY TARGETING:")
+    print("• Focus on ESP Codes 1 & 2 (67% of contacts, excellent performance)")
+    print("• Consider ESP Code 8 for high-value campaigns (limited volume, high performance)")
+    print("• Avoid or deprioritize ESP Code 999 (21.5% of contacts, poor ROI)")
+    
+    print("\n🔧 DATA QUALITY:")
+    print("• Investigate ESP Code 999 - may represent data quality issues")
+    print("• ESP Code 1000 could be enterprise opportunities worth exploring")
+    print("• Consider ESP code as primary segmentation criterion")
+    
+    print("\n💡 STRATEGIC INSIGHTS:")
+    print("• ESP code is the strongest predictor of email engagement")
+    print("• Major ESPs (Gmail, Outlook) provide best deliverability and engagement")
+    print("• Default/catch-all codes indicate potential data enrichment opportunities")
 
 if __name__ == "__main__":
     analyze_esp_codes() 

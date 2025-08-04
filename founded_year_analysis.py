@@ -1,375 +1,440 @@
 """
 Founded Year Analysis Dashboard
-Analyzing engagement patterns by company age and years since founding
+Comprehensive analysis of company founding year and its impact on email performance
 """
 
 import pandas as pd
 import numpy as np
-from pathlib import Path
 import matplotlib.pyplot as plt
 import seaborn as sns
+from pathlib import Path
+from datetime import datetime
 
 # Configuration
 CSV_FILE_PATH = Path("merged_contacts.csv")
+plt.style.use('seaborn-v0_8')
 
 def analyze_founded_year():
-    """Comprehensive analysis of organization founded year and years since founding"""
-    print("Loading data for founded year analysis...")
+    """Comprehensive founding year analysis with performance correlations"""
+    print("Loading data...")
     df = pd.read_csv(CSV_FILE_PATH)
     print(f"Data shape: {df.shape}")
+    
+    # Convert timestamp columns to datetime
+    if 'timestamp_created_x' in df.columns:
+        df['timestamp_created_x'] = pd.to_datetime(df['timestamp_created_x'], utc=True, errors='coerce')
+    
+    # Identify founding year column
+    founded_cols = [col for col in df.columns if any(word in col.lower() for word in ['found', 'year', 'establish', 'start'])]
+    print(f"Founded year related columns found: {founded_cols}")
+    
+    # Use the first founded year column found, or check for common names
+    founded_col = None
+    for col in ['founded_year', 'year_founded', 'founded', 'establishment_year']:
+        if col in df.columns:
+            founded_col = col
+            break
+    
+    if not founded_col and founded_cols:
+        founded_col = founded_cols[0]
+    
+    if not founded_col:
+        print("❌ No founding year column found. Checking all numeric columns...")
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        print(f"Available numeric columns: {list(numeric_cols)}")
+        return
+    
+    print(f"Using founding year column: {founded_col}")
     
     print("\n" + "="*80)
     print("FOUNDED YEAR ANALYSIS DASHBOARD")
     print("="*80)
     
-    # 1. Founded Year Field Analysis
-    print("\n1. FOUNDED YEAR FIELD ANALYSIS:")
-    print("-" * 50)
+    # 1. Founded Year Overview
+    print("\n1. FOUNDED YEAR OVERVIEW:")
+    print("-" * 60)
     
-    if 'organization_founded_year' in df.columns:
-        print(f"ORGANIZATION_FOUNDED_YEAR Analysis:")
-        print(f"  Total records: {len(df)}")
-        print(f"  Non-null values: {df['organization_founded_year'].notna().sum()}")
-        print(f"  Null values: {df['organization_founded_year'].isna().sum()}")
-        print(f"  Data coverage: {df['organization_founded_year'].notna().sum()/len(df)*100:.1f}%")
-        print(f"  Unique values: {df['organization_founded_year'].nunique()}")
+    current_year = datetime.now().year
+    total_contacts = len(df)
+    valid_founded_data = df[df[founded_col].notna()]
+    
+    print(f"📊 Total Contacts: {total_contacts:,}")
+    print(f"📈 Contacts with Founded Year Data: {len(valid_founded_data):,}")
+    print(f"📊 Data Coverage: {len(valid_founded_data)/total_contacts:.1%}")
+    
+    if len(valid_founded_data) > 0:
+        print(f"🏢 Earliest Founded: {int(valid_founded_data[founded_col].min())}")
+        print(f"🏢 Latest Founded: {int(valid_founded_data[founded_col].max())}")
+        print(f"🏢 Median Founded Year: {int(valid_founded_data[founded_col].median())}")
+        print(f"🏢 Mean Founded Year: {valid_founded_data[founded_col].mean():.0f}")
         
-        # Show distribution of founded years
-        print(f"\nFounded year distribution:")
-        print(df['organization_founded_year'].describe())
+        # Calculate company ages
+        df['company_age'] = current_year - df[founded_col]
+        valid_age_data = df[df['company_age'].notna() & (df['company_age'] >= 0)]
         
-        # Show sample values
-        sample_years = df['organization_founded_year'].dropna().unique()[:10]
-        print(f"Sample founded years: {sorted(sample_years)}")
+        if len(valid_age_data) > 0:
+            print(f"🗓️ Youngest Company: {int(valid_age_data['company_age'].min())} years old")
+            print(f"🗓️ Oldest Company: {int(valid_age_data['company_age'].max())} years old")
+            print(f"🗓️ Median Company Age: {int(valid_age_data['company_age'].median())} years")
+            print(f"🗓️ Average Company Age: {valid_age_data['company_age'].mean():.1f} years")
+    
+    # 2. Company Age Categorization
+    print("\n2. COMPANY AGE CATEGORIZATION:")
+    print("-" * 60)
+    
+    def categorize_company_age(founded_year):
+        if pd.isna(founded_year):
+            return 'Unknown'
         
-        # Calculate years since founding
-        current_year = 2024
-        df['years_since_founding'] = current_year - df['organization_founded_year']
+        age = current_year - founded_year
         
-        print(f"\nYears since founding distribution:")
-        print(df['years_since_founding'].describe())
-        
-    else:
-        print(f"Error: organization_founded_year column not found!")
-        return df
+        if age < 0:
+            return 'Invalid'
+        elif age <= 3:
+            return 'Startup (0-3 years)'
+        elif age <= 10:
+            return 'Young (4-10 years)'
+        elif age <= 20:
+            return 'Mature (11-20 years)'
+        elif age <= 50:
+            return 'Established (21-50 years)'
+        else:
+            return 'Legacy (50+ years)'
     
-    # 2. Company Age Categories
-    print("\n\n2. COMPANY AGE CATEGORIES:")
-    print("-" * 50)
+    df['company_age_category'] = df[founded_col].apply(categorize_company_age)
     
-    # Create company age categories
-    df['company_age'] = 'Unknown'
+    age_distribution = df['company_age_category'].value_counts()
+    print("Company age distribution:")
+    for category, count in age_distribution.items():
+        percentage = (count / total_contacts) * 100
+        print(f"  {category}: {count:,} contacts ({percentage:.1f}%)")
     
-    if 'years_since_founding' in df.columns:
-        # Only categorize records with valid years since founding
-        valid_mask = df['years_since_founding'].notna() & (df['years_since_founding'] >= 0)
-        df.loc[valid_mask, 'company_age'] = pd.cut(
-            df.loc[valid_mask, 'years_since_founding'],
-            bins=[0, 5, 10, 20, 50, 100, float('inf')],
-            labels=['0-5 years', '6-10 years', '11-20 years', '21-50 years', '51-100 years', '100+ years']
-        )
+    # 3. Performance by Company Age
+    print("\n3. PERFORMANCE BY COMPANY AGE:")
+    print("-" * 60)
     
-    age_distribution = df['company_age'].value_counts()
-    print("Company Age Distribution:")
-    print(age_distribution)
-    print(f"\nPercentage with known company age: {(age_distribution.sum() - age_distribution.get('Unknown', 0))/len(df)*100:.1f}%")
-    
-    # 3. Engagement Analysis by Company Age
-    print("\n\n3. ENGAGEMENT ANALYSIS BY COMPANY AGE:")
-    print("-" * 50)
-    
-    engagement_by_age = df.groupby('company_age').agg({
-        'email_open_count': ['count', 'sum', 'mean'],
+    performance_by_age = df.groupby('company_age_category').agg({
+        'email_open_count': ['sum', 'mean', 'std'],
         'email_click_count': ['sum', 'mean'],
-        'email_reply_count': ['sum', 'mean']
-    }).round(2)
+        'email_reply_count': ['sum', 'mean'],
+        'id': 'count'
+    }).round(3)
     
-    engagement_by_age.columns = ['contact_count', 'total_opens', 'avg_opens', 
-                               'total_clicks', 'avg_clicks', 'total_replies', 'avg_replies']
-    engagement_by_age['open_rate'] = (engagement_by_age['total_opens'] / engagement_by_age['contact_count'] * 100).round(2)
-    engagement_by_age['click_rate'] = (engagement_by_age['total_clicks'] / engagement_by_age['contact_count'] * 100).round(2)
-    engagement_by_age['reply_rate'] = (engagement_by_age['total_replies'] / engagement_by_age['contact_count'] * 100).round(2)
+    performance_by_age.columns = [
+        'total_opens', 'avg_opens', 'std_opens',
+        'total_clicks', 'avg_clicks',
+        'total_replies', 'avg_replies',
+        'contacts'
+    ]
     
-    print("Engagement Metrics by Company Age:")
-    print(engagement_by_age)
-    
-    # 4. Seniority Analysis by Company Age
-    print("\n\n4. SENIORITY ANALYSIS BY COMPANY AGE:")
-    print("-" * 50)
-    
-    if 'seniority' in df.columns:
-        # Only analyze known company ages
-        known_ages_df = df[df['company_age'] != 'Unknown']
-        if len(known_ages_df) > 0:
-            seniority_by_age = known_ages_df.groupby(['company_age', 'seniority']).size().unstack(fill_value=0)
-            print("Seniority Distribution by Company Age (Known ages only):")
-            print(seniority_by_age)
+    print("Performance metrics by company age:")
+    for category, row in performance_by_age.iterrows():
+        if row['contacts'] > 0:
+            # Calculate engagement rates
+            subset = df[df['company_age_category'] == category]
+            open_rate = (subset['email_open_count'] > 0).mean()
+            click_rate = (subset['email_click_count'] > 0).mean()
+            reply_rate = (subset['email_reply_count'] > 0).mean()
             
-            # Seniority engagement by company age
-            seniority_engagement = known_ages_df.groupby(['company_age', 'seniority'])['email_open_count'].agg(['count', 'sum']).reset_index()
-            seniority_engagement['open_rate'] = (seniority_engagement['sum'] / seniority_engagement['count'] * 100).round(2)
-            print("\nSeniority Engagement by Company Age:")
-            print(seniority_engagement.sort_values(['company_age', 'open_rate'], ascending=[True, False]))
-        else:
-            print("No records with known company age for seniority analysis.")
+            print(f"\n🏢 {category}:")
+            print(f"  📊 Contacts: {row['contacts']:,}")
+            print(f"  📈 Avg Opens: {row['avg_opens']:.3f} | Open Rate: {open_rate:.1%}")
+            print(f"  🖱️ Avg Clicks: {row['avg_clicks']:.3f} | Click Rate: {click_rate:.1%}")
+            print(f"  💬 Avg Replies: {row['avg_replies']:.3f} | Reply Rate: {reply_rate:.1%}")
+            if len(subset) > 0 and 'company_age' in df.columns:
+                avg_age = subset['company_age'].median()
+                if not pd.isna(avg_age):
+                    print(f"  🗓️ Median Age: {avg_age:.0f} years")
     
-    # 5. Industry Analysis by Company Age
-    print("\n\n5. INDUSTRY ANALYSIS BY COMPANY AGE:")
-    print("-" * 50)
+    # 4. Timeline Analysis by Company Age
+    print("\n4. TIMELINE ANALYSIS BY COMPANY AGE:")
+    print("-" * 60)
     
-    if 'organization_industry' in df.columns:
-        # Only analyze known company ages
-        known_ages_df = df[df['company_age'] != 'Unknown']
-        if len(known_ages_df) > 0:
-            industry_by_age = known_ages_df.groupby(['company_age', 'organization_industry']).size().unstack(fill_value=0)
-            print("Top Industries by Company Age (Known ages only):")
-            for age in industry_by_age.index:
-                top_industries = industry_by_age.loc[age].nlargest(5)
-                print(f"\n{age} companies - Top industries:")
-                for industry, count in top_industries.items():
-                    print(f"  {industry}: {count}")
-        else:
-            print("No records with known company age for industry analysis.")
-    
-    # 6. Geographic Analysis by Company Age
-    print("\n\n6. GEOGRAPHIC ANALYSIS BY COMPANY AGE:")
-    print("-" * 50)
-    
-    if 'country' in df.columns:
-        # Only analyze known company ages
-        known_ages_df = df[df['company_age'] != 'Unknown']
-        if len(known_ages_df) > 0:
-            country_by_age = known_ages_df.groupby(['company_age', 'country']).size().unstack(fill_value=0)
-            print("Top Countries by Company Age (Known ages only):")
-            for age in country_by_age.index:
-                top_countries = country_by_age.loc[age].nlargest(5)
-                print(f"\n{age} companies - Top countries:")
-                for country, count in top_countries.items():
-                    print(f"  {country}: {count}")
-        else:
-            print("No records with known company age for geographic analysis.")
-    
-    # 7. Create Visualizations
-    print("\n\n7. CREATING VISUALIZATIONS:")
-    print("-" * 50)
-    
-    plt.figure(figsize=(20, 15))
-    
-    # Subplot 1: Company Age Data Coverage
-    plt.subplot(3, 3, 1)
-    known_count = age_distribution.sum() - age_distribution.get('Unknown', 0)
-    unknown_count = age_distribution.get('Unknown', 0)
-    plt.pie([known_count, unknown_count], labels=['Known Age', 'Unknown Age'], autopct='%1.1f%%')
-    plt.title('Company Age Data Coverage')
-    
-    # Subplot 2: Known Company Age Distribution
-    plt.subplot(3, 3, 2)
-    known_ages = age_distribution.drop('Unknown', errors='ignore')
-    if len(known_ages) > 0:
-        plt.pie(known_ages.values, labels=known_ages.index, autopct='%1.1f%%')
-        plt.title('Distribution of Known Company Ages')
-    else:
-        plt.text(0.5, 0.5, 'No known company ages', ha='center', va='center', transform=plt.gca().transAxes)
-        plt.title('No Known Company Ages')
-    
-    # Subplot 3: Open Rate by Company Age
-    plt.subplot(3, 3, 3)
-    known_engagement = engagement_by_age.drop('Unknown', errors='ignore')
-    if len(known_engagement) > 0:
-        bars = plt.bar(range(len(known_engagement)), known_engagement['open_rate'].values)
-        plt.xlabel('Company Age')
-        plt.ylabel('Open Rate (%)')
-        plt.title('Email Open Rate by Company Age')
-        plt.xticks(range(len(known_engagement)), known_engagement.index, rotation=45)
+    if 'timestamp_created_x' in df.columns:
+        monthly_by_age = df.groupby([
+            pd.Grouper(key='timestamp_created_x', freq='ME'),
+            'company_age_category'
+        ]).agg({
+            'email_open_count': ['sum', 'mean'],
+            'id': 'count'
+        }).round(3)
         
-        # Color bars based on performance
-        for i, bar in enumerate(bars):
-            if known_engagement['open_rate'].iloc[i] > known_engagement['open_rate'].mean():
-                bar.set_color('green')
-            else:
-                bar.set_color('red')
-    else:
-        plt.text(0.5, 0.5, 'No data for known ages', ha='center', va='center', transform=plt.gca().transAxes)
-        plt.title('No Known Company Ages')
-    
-    # Subplot 4: Contact Volume by Company Age
-    plt.subplot(3, 3, 4)
-    if len(known_engagement) > 0:
-        plt.bar(range(len(known_engagement)), known_engagement['contact_count'].values, color='blue')
-        plt.xlabel('Company Age')
-        plt.ylabel('Number of Contacts')
-        plt.title('Contact Volume by Company Age')
-        plt.xticks(range(len(known_engagement)), known_engagement.index, rotation=45)
-    else:
-        plt.text(0.5, 0.5, 'No data for known ages', ha='center', va='center', transform=plt.gca().transAxes)
-        plt.title('No Known Company Ages')
-    
-    # Subplot 5: Engagement Metrics by Company Age
-    plt.subplot(3, 3, 5)
-    if len(known_engagement) > 0:
-        x = np.arange(len(known_engagement))
-        width = 0.25
-        plt.bar(x - width, known_engagement['open_rate'], width, label='Open Rate', color='blue')
-        plt.bar(x, known_engagement['click_rate'], width, label='Click Rate', color='orange')
-        plt.bar(x + width, known_engagement['reply_rate'], width, label='Reply Rate', color='green')
-        plt.xlabel('Company Age')
-        plt.ylabel('Rate (%)')
-        plt.title('Engagement Metrics by Company Age')
-        plt.xticks(x, known_engagement.index, rotation=45)
-        plt.legend()
-    else:
-        plt.text(0.5, 0.5, 'No data for known ages', ha='center', va='center', transform=plt.gca().transAxes)
-        plt.title('No Known Company Ages')
-    
-    # Subplot 6: Performance vs Volume Scatter Plot
-    plt.subplot(3, 3, 6)
-    # Use the correct DataFrame for known ages
-    known_ages_df = df[df['company_age'] != 'Unknown']
-    if len(known_ages_df) > 0:
-        # Debug: print type and columns before visualization
-        print('Type of known_ages_df:', type(known_ages_df))
-        print('Columns in known_ages_df before visualization:', known_ages_df.columns.tolist())
-        # Use the correct engagement column for scatter plot
-        engagement_col = None
-        for col in ['email_open_count', 'total_opens', 'opened']:
-            if col in known_ages_df.columns:
-                engagement_col = col
-                break
-        if engagement_col is None:
-            print('No suitable engagement column found for scatter plot!')
-            plt.text(0.5, 0.5, 'No engagement column found', ha='center', va='center', transform=plt.gca().transAxes)
-            plt.title('No Engagement Column')
-        else:
-            # Create engagement metrics for scatter plot using manual aggregation for compatibility
-            volume = known_ages_df.groupby('company_age')[engagement_col].count()
-            total_opens = known_ages_df.groupby('company_age')[engagement_col].sum()
-            avg_opens = known_ages_df.groupby('company_age')[engagement_col].mean()
-            open_rate = (total_opens / volume).round(3)
-            age_metrics = pd.DataFrame({
-                'volume': volume,
-                'total_opens': total_opens,
-                'avg_opens': avg_opens,
-                'Open_Rate': open_rate
-            })
-            # Filter out any rows with zero volume
-            valid_data = age_metrics[age_metrics['volume'] > 0].copy()
-            if len(valid_data) > 0:
-                # Create scatter plot
-                scatter = plt.scatter(valid_data['volume'], valid_data['Open_Rate'], 
-                                    s=valid_data['volume']/100,  # Size based on volume
-                                    alpha=0.7, c=valid_data['Open_Rate'], cmap='viridis')
-                # Add labels for each point
-                for idx, row in valid_data.iterrows():
-                    plt.annotate(str(idx), (row['volume'], row['Open_Rate']), 
-                                xytext=(5, 5), textcoords='offset points', fontsize=8)
-                plt.xlabel('Number of Contacts')
-                plt.ylabel('Open Rate')
-                plt.title('Performance vs Volume Analysis')
-                plt.grid(True, alpha=0.3)
-                plt.colorbar(scatter, label='Open Rate')
-            else:
-                plt.text(0.5, 0.5, 'No valid data', ha='center', va='center', transform=plt.gca().transAxes)
-                plt.title('No Valid Data')
-    else:
-        plt.text(0.5, 0.5, 'No data for known ages', ha='center', va='center', transform=plt.gca().transAxes)
-        plt.title('No Known Company Ages')
-    
-    # Subplot 7: Average Opens by Company Age and Seniority
-    plt.subplot(3, 3, 7)
-    if 'seniority' in df.columns and len(known_ages_df) > 0:
-        pivot_data = known_ages_df.groupby(['company_age', 'seniority'])['email_open_count'].mean().unstack(fill_value=0)
-        sns.heatmap(pivot_data, annot=True, fmt='.2f', cmap='YlOrRd')
-        plt.title('Average Opens by Company Age and Seniority')
-        plt.xlabel('Seniority')
-        plt.ylabel('Company Age')
-    else:
-        plt.text(0.5, 0.5, 'No seniority data', ha='center', va='center', transform=plt.gca().transAxes)
-        plt.title('No Seniority Data')
-    
-    # Subplot 8: Geographic Distribution by Company Age
-    plt.subplot(3, 3, 8)
-    if 'country' in df.columns and len(known_ages_df) > 0:
-        country_counts = known_ages_df.groupby('country').size().nlargest(10)
-        plt.bar(range(len(country_counts)), country_counts.values, color='green')
-        plt.xlabel('Country')
-        plt.ylabel('Number of Contacts')
-        plt.title('Top Countries (Known Company Ages)')
-        plt.xticks(range(len(country_counts)), country_counts.index, rotation=45)
-    else:
-        plt.text(0.5, 0.5, 'No country data', ha='center', va='center', transform=plt.gca().transAxes)
-        plt.title('No Country Data')
-    
-    # Subplot 9: ROI Score by Company Age
-    plt.subplot(3, 3, 9)
-    if len(known_engagement) > 0:
-        # Calculate ROI score (engagement rate * contact volume)
-        known_engagement['roi_score'] = (known_engagement['open_rate'] * known_engagement['contact_count'] / 100).round(0)
-        bars = plt.bar(range(len(known_engagement)), known_engagement['roi_score'].values, color='red')
-        plt.xlabel('Company Age')
-        plt.ylabel('ROI Score')
-        plt.title('ROI Score by Company Age')
-        plt.xticks(range(len(known_engagement)), known_engagement.index, rotation=45)
+        monthly_by_age.columns = ['total_opens', 'avg_opens', 'contacts']
+        monthly_by_age = monthly_by_age[monthly_by_age['contacts'] > 0]
         
-        # Add value labels on bars
-        for i, bar in enumerate(bars):
-            height = bar.get_height()
-            plt.text(bar.get_x() + bar.get_width()/2., height + 0.01,
-                    f'{int(height)}', ha='center', va='bottom')
-    else:
-        plt.text(0.5, 0.5, 'No data for known ages', ha='center', va='center', transform=plt.gca().transAxes)
-        plt.title('No Known Company Ages')
+        print("📅 Monthly Performance by Company Age:")
+        
+        # Reorganize for display
+        timeline_data = {}
+        for (month, category), row in monthly_by_age.iterrows():
+            month_str = month.strftime('%Y-%m')
+            if month_str not in timeline_data:
+                timeline_data[month_str] = {}
+            
+            timeline_data[month_str][category] = {
+                'contacts': row['contacts'],
+                'total_opens': row['total_opens'],
+                'avg_opens': row['avg_opens']
+            }
+        
+        for month_str in sorted(timeline_data.keys()):
+            print(f"\n  📅 {month_str}:")
+            for category, data in timeline_data[month_str].items():
+                print(f"    🏢 {category}: {data['total_opens']:.0f} opens | "
+                      f"{data['contacts']:,} contacts | {data['avg_opens']:.3f} avg")
+    
+    # 5. Founded Year Decade Analysis
+    print("\n5. FOUNDED YEAR DECADE ANALYSIS:")
+    print("-" * 60)
+    
+    if len(valid_founded_data) > 0:
+        # Group by decades
+        df['founded_decade'] = (df[founded_col] // 10) * 10
+        decade_performance = df.groupby('founded_decade').agg({
+            'email_open_count': ['count', 'sum', 'mean'],
+            'email_click_count': 'mean',
+            founded_col: 'median'
+        }).round(3)
+        
+        decade_performance.columns = ['contacts', 'total_opens', 'avg_opens', 'avg_clicks', 'median_year']
+        decade_performance = decade_performance[decade_performance['contacts'] > 0]
+        
+        print("Performance by founding decade:")
+        for decade, row in decade_performance.iterrows():
+            if row['contacts'] >= 10 and decade >= 1900:  # Only show meaningful decades
+                print(f"  📅 {decade:.0f}s: {row['avg_opens']:.3f} avg opens | "
+                      f"{row['avg_clicks']:.3f} avg clicks | {row['contacts']:,} contacts")
+    
+    # 6. Company Age Correlation Analysis
+    print("\n6. COMPANY AGE CORRELATION ANALYSIS:")
+    print("-" * 60)
+    
+    if 'company_age' in df.columns and len(valid_age_data) > 0:
+        # Correlations with performance metrics
+        correlations = {}
+        correlations['opens'] = valid_age_data['company_age'].corr(valid_age_data['email_open_count'])
+        correlations['clicks'] = valid_age_data['company_age'].corr(valid_age_data['email_click_count'])
+        correlations['replies'] = valid_age_data['company_age'].corr(valid_age_data['email_reply_count'])
+        
+        print("Correlation between company age and performance:")
+        for metric, corr in correlations.items():
+            print(f"  📊 {metric.title()}: {corr:.3f}")
+            if abs(corr) < 0.1:
+                print(f"    → Very weak correlation")
+            elif abs(corr) < 0.3:
+                print(f"    → Weak correlation")
+            elif abs(corr) < 0.5:
+                print(f"    → Moderate correlation")
+            else:
+                print(f"    → Strong correlation")
+    
+    # 7. Industry Evolution Analysis
+    print("\n7. INDUSTRY EVOLUTION ANALYSIS:")
+    print("-" * 60)
+    
+    if len(valid_founded_data) > 0:
+        # Analyze performance by era
+        def categorize_business_era(founded_year):
+            if pd.isna(founded_year):
+                return 'Unknown'
+            elif founded_year < 1980:
+                return 'Pre-Digital Era'
+            elif founded_year < 1995:
+                return 'Early Tech Era'
+            elif founded_year < 2000:
+                return 'Internet Boom'
+            elif founded_year < 2008:
+                return 'Social Media Era'
+            elif founded_year < 2015:
+                return 'Mobile Era'
+            else:
+                return 'Cloud/AI Era'
+        
+        df['business_era'] = df[founded_col].apply(categorize_business_era)
+        
+        era_performance = df.groupby('business_era').agg({
+            'email_open_count': ['count', 'mean'],
+            'email_click_count': 'mean'
+        }).round(3)
+        
+        era_performance.columns = ['contacts', 'avg_opens', 'avg_clicks']
+        era_performance = era_performance[era_performance['contacts'] > 0]
+        
+        print("Performance by business era:")
+        for era, row in era_performance.iterrows():
+            if row['contacts'] >= 10:
+                print(f"  🕰️ {era}: {row['avg_opens']:.3f} avg opens | "
+                      f"{row['avg_clicks']:.3f} avg clicks | {row['contacts']:,} contacts")
+    
+    # 8. Create Comprehensive Dashboard
+    print("\n8. CREATING FOUNDED YEAR DASHBOARD:")
+    print("-" * 60)
+    
+    fig, axes = plt.subplots(3, 3, figsize=(20, 18))
+    fig.suptitle('Founded Year Analysis Dashboard', fontsize=20, fontweight='bold')
+    
+    # Plot 1: Company Age Distribution
+    ax = axes[0, 0]
+    age_counts = df['company_age_category'].value_counts()
+    colors = plt.cm.Set3(np.linspace(0, 1, len(age_counts)))
+    wedges, texts, autotexts = ax.pie(age_counts.values, labels=age_counts.index, 
+                                     autopct='%1.1f%%', colors=colors)
+    ax.set_title('Company Age Distribution')
+    
+    # Plot 2: Founded Year Histogram
+    ax = axes[0, 1]
+    if len(valid_founded_data) > 0:
+        valid_founded_data[founded_col].hist(bins=30, alpha=0.7, color='skyblue', 
+                                           edgecolor='black', ax=ax)
+        ax.set_title('Founded Year Distribution')
+        ax.set_xlabel('Founded Year')
+        ax.set_ylabel('Frequency')
+    
+    # Plot 3: Performance by Company Age
+    ax = axes[0, 2]
+    if not performance_by_age.empty:
+        performance_by_age['avg_opens'].plot(kind='bar', ax=ax, color='lightgreen')
+        ax.set_title('Average Opens by Company Age')
+        ax.set_ylabel('Average Opens per Contact')
+        ax.tick_params(axis='x', rotation=45)
+    
+    # Plot 4: Company Age vs Opens Scatter
+    ax = axes[1, 0]
+    if 'company_age' in df.columns and len(valid_age_data) > 0:
+        # Sample data for better visualization if dataset is large
+        sample_size = min(1000, len(valid_age_data))
+        sample_data = valid_age_data.sample(sample_size) if len(valid_age_data) > sample_size else valid_age_data
+        
+        ax.scatter(sample_data['company_age'], sample_data['email_open_count'], 
+                  alpha=0.6, color='coral')
+        ax.set_xlabel('Company Age (Years)')
+        ax.set_ylabel('Email Opens')
+        ax.set_title('Company Age vs Email Opens')
+    
+    # Plot 5: Monthly Timeline by Company Age
+    ax = axes[1, 1]
+    if 'timestamp_created_x' in df.columns:
+        age_categories = ['Startup (0-3 years)', 'Young (4-10 years)', 'Mature (11-20 years)', 
+                         'Established (21-50 years)', 'Legacy (50+ years)']
+        colors = plt.cm.tab10(np.linspace(0, 1, len(age_categories)))
+        
+        for i, category in enumerate(age_categories):
+            category_data = df[df['company_age_category'] == category]
+            if len(category_data) > 0:
+                monthly_opens = category_data.groupby(
+                    pd.Grouper(key='timestamp_created_x', freq='ME')
+                )['email_open_count'].mean()
+                
+                if len(monthly_opens) > 0:
+                    monthly_opens.plot(ax=ax, marker='o', label=category.split('(')[0].strip(), 
+                                     color=colors[i], linewidth=2)
+        
+        ax.set_title('Monthly Average Opens by Company Age')
+        ax.set_ylabel('Average Opens per Contact')
+        ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        ax.grid(True, alpha=0.3)
+        ax.tick_params(axis='x', rotation=45)
+    
+    # Plot 6: Box Plot of Opens by Company Age
+    ax = axes[1, 2]
+    box_data = []
+    box_labels = []
+    for category in ['Startup (0-3 years)', 'Young (4-10 years)', 'Mature (11-20 years)', 
+                     'Established (21-50 years)', 'Legacy (50+ years)']:
+        subset = df[df['company_age_category'] == category]['email_open_count']
+        if len(subset) > 0:
+            box_data.append(subset)
+            box_labels.append(category.split('(')[0].strip())
+    
+    if box_data:
+        bp = ax.boxplot(box_data, tick_labels=box_labels, patch_artist=True)
+        colors = plt.cm.Set2(np.linspace(0, 1, len(bp['boxes'])))
+        for patch, color in zip(bp['boxes'], colors):
+            patch.set_facecolor(color)
+            patch.set_alpha(0.7)
+        
+        ax.set_title('Average Opens Distribution by Company Age')
+        ax.set_ylabel('Average Opens per Contact')
+        ax.tick_params(axis='x', rotation=45)
+    
+    # Plot 7: Decade Performance
+    ax = axes[2, 0]
+    if 'founded_decade' in df.columns and not decade_performance.empty:
+        recent_decades = decade_performance[decade_performance.index >= 1980]
+        if not recent_decades.empty:
+            recent_decades['avg_opens'].plot(kind='bar', ax=ax, color='gold')
+            ax.set_title('Performance by Founded Decade')
+            ax.set_ylabel('Average Opens')
+            ax.tick_params(axis='x', rotation=45)
+    
+    # Plot 8: Click Rate vs Company Age
+    ax = axes[2, 1]
+    if not performance_by_age.empty:
+        click_rates_by_age = df.groupby('company_age_category').apply(
+            lambda x: (x['email_click_count'] > 0).mean()
+        )
+        click_rates_by_age.plot(kind='bar', ax=ax, color='purple')
+        ax.set_title('Click Rate by Company Age')
+        ax.set_ylabel('Click Rate')
+        ax.tick_params(axis='x', rotation=45)
+    
+    # Plot 9: Business Era Performance
+    ax = axes[2, 2]
+    if 'business_era' in df.columns and not era_performance.empty:
+        era_performance['avg_opens'].plot(kind='bar', ax=ax, color='orange')
+        ax.set_title('Performance by Business Era')
+        ax.set_ylabel('Average Opens')
+        ax.tick_params(axis='x', rotation=45)
     
     plt.tight_layout()
-    plt.savefig('founded_year_analysis_dashboard.png', dpi=300, bbox_inches='tight')
-    print("Dashboard saved as 'founded_year_analysis_dashboard.png'")
+    
+    # Save dashboard
+    dashboard_filename = 'founded_year_analysis_dashboard.png'
+    plt.savefig(dashboard_filename, dpi=300, bbox_inches='tight')
+    print(f"✅ Founded year dashboard saved as '{dashboard_filename}'")
+    
+    # 9. Business Insights and Recommendations
+    print("\n9. BUSINESS INSIGHTS AND RECOMMENDATIONS:")
+    print("="*80)
+    
+    if not performance_by_age.empty:
+        best_performing_age = performance_by_age['avg_opens'].idxmax()
+        worst_performing_age = performance_by_age['avg_opens'].idxmin()
+        best_performance = performance_by_age.loc[best_performing_age, 'avg_opens']
+        worst_performance = performance_by_age.loc[worst_performing_age, 'avg_opens']
+        
+        print("🔍 KEY FINDINGS:")
+        print(f"• Best performing company age: {best_performing_age} ({best_performance:.3f} avg opens)")
+        print(f"• Worst performing company age: {worst_performing_age} ({worst_performance:.3f} avg opens)")
+        
+        if 'company_age' in df.columns and len(valid_age_data) > 0:
+            overall_corr = valid_age_data['company_age'].corr(valid_age_data['email_open_count'])
+            print(f"• Overall correlation between company age and opens: {overall_corr:.3f}")
+        
+        print("\n📊 STRATEGIC RECOMMENDATIONS:")
+        print(f"• Focus targeting efforts on {best_performing_age} companies for maximum engagement")
+        print("• Customize messaging based on company maturity and business lifecycle stage")
+        print("• Consider different value propositions for different company ages")
+        print("• Monitor performance trends across company ages over time")
+        print("• Use company founding year as a key segmentation variable")
+        
+        if 'company_age' in df.columns and len(valid_age_data) > 0:
+            if overall_corr > 0.1:
+                print("• Older companies show better engagement - emphasize stability and experience")
+            elif overall_corr < -0.1:
+                print("• Younger companies show better engagement - focus on innovation and growth")
+            else:
+                print("• Company age has minimal impact on engagement - focus on other factors")
+        
+        # Era-specific insights
+        if 'business_era' in df.columns and not era_performance.empty:
+            print("\n🕰️ ERA-SPECIFIC INSIGHTS:")
+            print("• Tailor messaging to reflect the technological context of each era")
+            print("• Pre-digital companies may need more education on digital solutions")
+            print("• Cloud/AI era companies may be more receptive to cutting-edge technology")
+    
     plt.show()
-    
-    # 8. Business Insights and Recommendations
-    print("\n\n8. BUSINESS INSIGHTS AND RECOMMENDATIONS:")
-    print("-" * 50)
-    
-    if len(engagement_by_age) > 1:  # More than just 'Unknown'
-        print("🎯 KEY INSIGHTS:")
-        print("📊 1. Data Quality:")
-        print(f"   ✅ {df['organization_founded_year'].notna().sum()/len(df)*100:.1f}% of records have founded year data")
-        print(f"   ⚠️  {age_distribution.get('Unknown', 0)} records lack company age information")
-        
-        print("\n📈 2. Engagement Patterns:")
-        if len(known_engagement) > 0:
-            best_age = known_engagement['open_rate'].idxmax()
-            worst_age = known_engagement['open_rate'].idxmin()
-            print(f"   🏆 Best performing company age: {best_age} ({known_engagement.loc[best_age, 'open_rate']:.1f}% open rate)")
-            print(f"   📉 Lowest performing company age: {worst_age} ({known_engagement.loc[worst_age, 'open_rate']:.1f}% open rate)")
-        
-        print("\n💡 3. Strategic Recommendations:")
-        print("   🔍 Focus on data enrichment to improve company age coverage")
-        print("   🎯 Target campaigns based on company age performance")
-        print("   📝 Develop age-specific messaging strategies")
-        print("   ⭐ Prioritize high-performing company age segments")
-        
-        print("\n🚀 4. Actionable Insights:")
-        print("   🏢 Company age can significantly impact engagement rates")
-        print("   📊 Younger companies may have different engagement patterns")
-        print("   🌍 Geographic distribution varies by company age")
-        print("   👥 Seniority targeting should consider company age")
-        
-        print("\n📋 5. Next Steps:")
-        print("   🎯 Prioritize campaigns targeting high-performing company ages")
-        print("   📈 Develop age-specific engagement strategies")
-        print("   🔄 Improve data quality for the remaining records")
-        print("   📊 Monitor performance by company age segments")
-    else:
-        print("⚠️ LIMITED INSIGHTS DUE TO DATA QUALITY:")
-        print("📊 1. Data Quality Issues:")
-        print("   ❌ Most records lack company age information")
-        print("   🔧 Need to improve data enrichment processes")
-        
-        print("\n💡 2. Recommendations:")
-        print("   📥 Implement better data collection for company age")
-        print("   🔍 Use alternative data sources for company information")
-        print("   🎯 Focus on other segmentation variables (seniority, industry, etc.)")
-    
     return df
 
 if __name__ == "__main__":
-    df = analyze_founded_year() 
+    df = analyze_founded_year()

@@ -1,0 +1,101 @@
+data:
+  input_file: data/sample_data_multiclass.csv
+  random_state: 42
+  target_type: multiclass
+  target_variable: engagement_level
+  test_size: 0.25
+features:
+  cols_to_drop:
+  - id
+  - email
+  - first_name
+  - last_name
+  - company_name
+  - linkedin_url
+  - website
+  - headline
+  - company_domain
+  - phone
+  - apollo_id
+  - apollo_name
+  - organization
+  - photo_url
+  - organization_name
+  - organization_website
+  - organization_phone
+  - email_open_count
+  - email_reply_count
+  - email_click_count
+  - email_opened_variant
+  - email_opened_step
+  - email_clicked_variant
+  - email_clicked_step
+  - email_replied_variant
+  - email_replied_step
+  - timestamp_last_open
+  - timestamp_last_reply
+  - timestamp_last_click
+  - timestamp_last_touch
+  - timestamp_last_interest_change
+  max_categories: 100
+  preprocessing:
+    categorical_max_categories: 30
+    outlier_quantile_threshold: 0.99
+    text_length_quantile_threshold: 0.95
+    text_max_df: 0.95
+    text_max_features: 300
+    text_min_df: 2
+    text_ngram_range:
+    - 1
+    - 2
+  target_features: 60
+logging:
+  backup_count: 5
+  file: logs/pipeline.log
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  level: INFO
+  max_file_size: 10MB
+model:
+  ensemble:
+    n_jobs: -1
+    voting: soft
+  name: email_open_predictor
+  version: '1.0'
+  xgboost_params:
+    colsample_bytree: 0.9
+    eval_metric: logloss
+    gamma: 0.1
+    learning_rate: 0.1
+    max_depth: 10
+    min_child_weight: 3
+    n_estimators: 400
+    objective: binary:logistic
+    random_state: 42
+    reg_alpha: 0.1
+    reg_lambda: 1.5
+    scale_pos_weight: 1.2
+    subsample: 0.9
+monitoring:
+  drift_threshold: 0.1
+  drift_window_size: 1000
+  log_actuals: true
+  log_interval: 100
+  log_predictions: true
+  performance_threshold: 0.05
+  retrain_threshold: 0.1
+paths:
+  config_dir: config
+  confusion_matrix: enhanced_xgboost_confusion_matrix.png
+  data_dir: data
+  feature_importance: enhanced_xgboost_feature_importance.png
+  hyperparameters: config/optimal_hyperparameters.json
+  model_artifact: models/email_open_predictor_v1.0.joblib
+  models_dir: models
+  src_dir: src
+training:
+  cv_folds: 5
+  random_state: 42
+  scoring: roc_auc
+  target_accuracy: 0.75
+  target_auc: 0.82
+  verbose: 1

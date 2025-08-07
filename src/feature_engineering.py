@@ -8,6 +8,7 @@ import numpy as np
 from sklearn.preprocessing import LabelEncoder
 import warnings
 warnings.filterwarnings('ignore')
+import json # Added for JSONB parsing
 
 def enhanced_text_preprocessing(df):
     """Advanced text preprocessing with quality scoring and combined features."""
@@ -328,11 +329,28 @@ def create_xgboost_optimized_features(df):
         # ESP performance tier (handle None values)
         if df_optimized['esp_code'].notna().any():
             esp_quantiles = df_optimized['esp_code'].dropna().quantile([0.33, 0.66])
-            df_optimized['esp_performance_tier'] = pd.cut(
-                df_optimized['esp_code'].fillna(df_optimized['esp_code'].median()),
-                bins=[0] + esp_quantiles.tolist() + [float('inf')],
-                labels=['Low', 'Medium', 'High']
-            ).cat.codes
+            # Create bins and handle duplicates
+            bins = [0] + esp_quantiles.tolist() + [float('inf')]
+            # Remove duplicates from bins
+            unique_bins = list(dict.fromkeys(bins))  # Preserve order while removing duplicates
+            
+            # Adjust labels based on number of bins
+            if len(unique_bins) == 2:  # Only 0 and inf
+                df_optimized['esp_performance_tier'] = 0
+            elif len(unique_bins) == 3:  # 0, quantile, inf
+                df_optimized['esp_performance_tier'] = pd.cut(
+                    df_optimized['esp_code'].fillna(df_optimized['esp_code'].median()),
+                    bins=unique_bins,
+                    labels=['Low', 'High'],
+                    duplicates='drop'
+                ).cat.codes
+            else:  # 0, quantile1, quantile2, inf
+                df_optimized['esp_performance_tier'] = pd.cut(
+                    df_optimized['esp_code'].fillna(df_optimized['esp_code'].median()),
+                    bins=unique_bins,
+                    labels=['Low', 'Medium', 'High'][:len(unique_bins)-1],
+                    duplicates='drop'
+                ).cat.codes
         else:
             df_optimized['esp_performance_tier'] = 0
     else:
@@ -386,6 +404,216 @@ def create_xgboost_optimized_features(df):
         df_optimized['is_established'] = 0
     
     return df_optimized
+
+def create_comprehensive_organization_data(df):
+    """
+    Create comprehensive organization data by combining all organization-related fields.
+    """
+    print("🏢 Creating comprehensive organization data...")
+    
+    df_org = df.copy()
+    
+    # Initialize comprehensive organization data
+    df_org['organization_comprehensive'] = ""
+    
+    # Combine all organization-related fields
+    org_fields = [
+        'organization_x', 'organization_y', 'organization_name', 'company_name',
+        'organization_industry', 'organization_website', 'organization_phone',
+        'company_domain', 'organization_data'
+    ]
+    
+    for field in org_fields:
+        if field in df_org.columns:
+            # Add field value if not null
+            mask = df_org[field].notna() & (df_org[field] != '')
+            df_org.loc[mask, 'organization_comprehensive'] += df_org.loc[mask, field].astype(str) + ' | '
+    
+    # Add employee count information
+    if 'organization_employees' in df_org.columns:
+        mask = df_org['organization_employees'].notna()
+        df_org.loc[mask, 'organization_comprehensive'] += 'Employees: ' + df_org.loc[mask, 'organization_employees'].astype(str) + ' | '
+    
+    # Add founded year information
+    if 'organization_founded_year' in df_org.columns:
+        mask = df_org['organization_founded_year'].notna()
+        df_org.loc[mask, 'organization_comprehensive'] += 'Founded: ' + df_org.loc[mask, 'organization_founded_year'].astype(str) + ' | '
+    
+    # Clean up the combined data
+    df_org['organization_comprehensive'] = df_org['organization_comprehensive'].str.rstrip(' | ')
+    
+    # Create organization data quality indicators
+    df_org['org_data_completeness'] = 0
+    org_quality_fields = [
+        'organization_name', 'organization_industry', 'organization_employees',
+        'organization_founded_year', 'organization_website', 'organization_phone'
+    ]
+    
+    for field in org_quality_fields:
+        if field in df_org.columns:
+            df_org['org_data_completeness'] += df_org[field].notna().astype(int)
+    
+    # Normalize completeness score (0-6 scale)
+    df_org['org_data_completeness_pct'] = df_org['org_data_completeness'] / len(org_quality_fields)
+    
+    # Create organization maturity indicators
+    if 'organization_employees' in df_org.columns and 'organization_founded_year' in df_org.columns:
+        current_year = pd.Timestamp.now().year
+        df_org['company_age'] = current_year - df_org['organization_founded_year'].fillna(current_year)
+        
+        # Organization maturity score (combination of size and age)
+        df_org['org_maturity_score'] = (
+            (df_org['organization_employees'].fillna(0) / 1000) * 0.5 +  # Size component
+            (df_org['company_age'] / 50) * 0.5  # Age component
+        )
+        
+        # Maturity categories
+        df_org['org_maturity_category'] = pd.cut(
+            df_org['org_maturity_score'],
+            bins=[0, 0.2, 0.5, 1.0, float('inf')],
+            labels=['Startup', 'Growth', 'Established', 'Enterprise'],
+            include_lowest=True
+        ).cat.codes
+    
+    # Create organization data length features
+    df_org['org_data_length'] = df_org['organization_comprehensive'].str.len()
+    df_org['org_data_word_count'] = df_org['organization_comprehensive'].str.split().str.len()
+    
+    # Organization data presence indicators
+    df_org['has_org_name'] = df_org['organization_name'].notna().astype(int) if 'organization_name' in df_org.columns else 0
+    df_org['has_org_industry'] = df_org['organization_industry'].notna().astype(int) if 'organization_industry' in df_org.columns else 0
+    df_org['has_org_employees'] = df_org['organization_employees'].notna().astype(int) if 'organization_employees' in df_org.columns else 0
+    df_org['has_org_website'] = df_org['organization_website'].notna().astype(int) if 'organization_website' in df_org.columns else 0
+    df_org['has_org_phone'] = df_org['organization_phone'].notna().astype(int) if 'organization_phone' in df_org.columns else 0
+    df_org['has_org_domain'] = df_org['company_domain'].notna().astype(int) if 'company_domain' in df_org.columns else 0
+    
+    # Parse JSONB organization_data if available
+    if 'organization_data' in df_org.columns:
+        try:
+            # Basic JSONB parsing
+            df_org['has_org_json_data'] = df_org['organization_data'].notna().astype(int)
+            df_org['org_json_length'] = df_org['organization_data'].astype(str).str.len()
+            
+            # Try to extract specific fields from JSON
+            def extract_org_json_field(json_str, field_name):
+                try:
+                    if pd.notna(json_str) and json_str != 'null':
+                        data = json.loads(json_str)
+                        return data.get(field_name, '')
+                    return ''
+                except:
+                    return ''
+            
+            # Extract common organization fields from JSON
+            df_org['org_json_has_website'] = df_org['organization_data'].apply(
+                lambda x: 1 if extract_org_json_field(x, 'website') else 0
+            )
+            df_org['org_json_has_phone'] = df_org['organization_data'].apply(
+                lambda x: 1 if extract_org_json_field(x, 'phone') else 0
+            )
+            df_org['org_json_has_address'] = df_org['organization_data'].apply(
+                lambda x: 1 if extract_org_json_field(x, 'address') else 0
+            )
+            
+        except Exception as e:
+            print(f"⚠️ Warning: Could not parse organization_data JSON: {e}")
+            df_org['has_org_json_data'] = 0
+            df_org['org_json_length'] = 0
+            df_org['org_json_has_website'] = 0
+            df_org['org_json_has_phone'] = 0
+            df_org['org_json_has_address'] = 0
+    
+    print(f"✅ Organization data created. Shape: {df_org.shape}")
+    print(f"📊 Organization data completeness: {df_org['org_data_completeness'].mean():.2f}/6 fields")
+    
+    return df_org
+
+def create_advanced_engagement_features(df):
+    """
+    Create advanced engagement pattern and behavioral features (NO LEAKAGE).
+    """
+    print("🎯 Creating advanced engagement features (no leakage)...")
+    
+    df_eng = df.copy()
+    
+    # 1. Temporal engagement patterns (safe - no target variables)
+    if 'timestamp_created' in df_eng.columns:
+        # Time-based engagement features
+        df_eng['created_hour'] = df_eng['timestamp_created'].dt.hour
+        df_eng['created_day_of_week'] = df_eng['timestamp_created'].dt.dayofweek
+        df_eng['created_month'] = df_eng['timestamp_created'].dt.month
+        
+        # Business hours engagement
+        df_eng['business_hours_created'] = (
+            (df_eng['created_hour'] >= 9) & (df_eng['created_hour'] <= 17) &
+            (df_eng['created_day_of_week'] < 5)
+        ).astype(int)
+        
+        # Weekend engagement
+        df_eng['weekend_created'] = (df_eng['created_day_of_week'] >= 5).astype(int)
+    
+    # 2. Company engagement context (safe - no target variables)
+    if 'organization_employees' in df_eng.columns:
+        # Company size engagement potential
+        df_eng['company_engagement_potential'] = df_eng['organization_employees'] / 1000
+        
+        # Company maturity engagement potential
+        if 'organization_founded_year' in df_eng.columns:
+            current_year = pd.Timestamp.now().year
+            df_eng['company_age'] = current_year - df_eng['organization_founded_year'].fillna(current_year)
+            df_eng['company_maturity_engagement'] = df_eng['company_age'] / 50
+    
+    # 3. Advanced text engagement signals (safe - no target variables)
+    if 'combined_text_length' in df_eng.columns:
+        # Text complexity score
+        df_eng['text_complexity_score'] = df_eng['combined_text_length'] / 1000
+        
+        # Text quality engagement potential
+        df_eng['text_quality_engagement'] = df_eng['text_quality_score'] / 10
+    
+    # 4. Campaign engagement context (safe - no target variables)
+    if 'campaign_frequency' in df_eng.columns:
+        # Campaign engagement potential
+        df_eng['campaign_engagement_potential'] = df_eng['campaign_frequency'] / 100
+        
+        # High-volume campaign indicator
+        df_eng['high_volume_campaign_potential'] = (
+            df_eng['campaign_frequency'] > df_eng['campaign_frequency'].quantile(0.75)
+        ).astype(int)
+    
+    # 5. Geographic engagement patterns (safe - no target variables)
+    if 'country_frequency' in df_eng.columns:
+        # Geographic engagement potential
+        df_eng['geo_engagement_potential'] = df_eng['country_frequency'] / 100
+    
+    # 6. Industry engagement patterns (safe - no target variables)
+    if 'industry_title_frequency' in df_eng.columns:
+        # Industry engagement potential
+        df_eng['industry_engagement_potential'] = df_eng['industry_title_frequency'] / 100
+    
+    # 7. ESP engagement patterns (safe - no target variables)
+    if 'esp_frequency' in df_eng.columns:
+        # ESP engagement potential
+        df_eng['esp_engagement_potential'] = df_eng['esp_frequency'] / 100
+    
+    # 8. Daily limit engagement patterns (safe - no target variables)
+    if 'daily_limit' in df_eng.columns:
+        # Daily limit engagement potential
+        df_eng['daily_limit_engagement_potential'] = df_eng['daily_limit'] / 1000
+    
+    # 9. Organization data engagement patterns (safe - no target variables)
+    if 'org_data_completeness' in df_eng.columns:
+        # Organization data engagement potential
+        df_eng['org_data_engagement_potential'] = df_eng['org_data_completeness'] / 6
+    
+    # 10. Text features engagement patterns (safe - no target variables)
+    if 'combined_text_word_count' in df_eng.columns:
+        # Text richness engagement potential
+        df_eng['text_richness_engagement'] = df_eng['combined_text_word_count'] / 100
+    
+    print(f"✅ Advanced engagement features created (no leakage). Shape: {df_eng.shape}")
+    
+    return df_eng
 
 def encode_categorical_features(df, max_categories=100):
     """
@@ -471,3 +699,21 @@ def prepare_features_for_model(df, target_variable='opened', cols_to_drop=None):
     print(f"Features: {list(X.columns)}")
     
     return X, y, list(X.columns) 
+
+def apply_enhanced_feature_engineering(df):
+    """
+    Apply all enhanced feature engineering techniques.
+    """
+    print("🚀 Applying enhanced feature engineering...")
+    
+    # Apply all feature engineering functions
+    df = enhanced_text_preprocessing(df)
+    df = advanced_timestamp_features(df)
+    df = create_interaction_features(df)
+    df = create_jsonb_features(df)
+    df = create_comprehensive_organization_data(df)  # Add comprehensive organization data
+    df = create_xgboost_optimized_features(df)
+    df = handle_outliers(df)
+    
+    print(f"✅ Enhanced feature engineering complete. Shape: {df.shape}")
+    return df 

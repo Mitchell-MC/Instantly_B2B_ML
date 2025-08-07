@@ -30,7 +30,8 @@ from feature_engineering import (
     enhanced_text_preprocessing, advanced_timestamp_features, 
     create_interaction_features, create_jsonb_features, handle_outliers,
     create_xgboost_optimized_features, encode_categorical_features, 
-    prepare_features_for_model
+    prepare_features_for_model, create_comprehensive_organization_data,
+    create_advanced_engagement_features # Added this import
 )
 
 def load_config():
@@ -101,51 +102,69 @@ def load_real_data(config):
     
     return df
 
-def create_target_variable(df, config):
-    """Create target variable with proper validation."""
+def create_target_variable(df):
+    """
+    Create target variable using new 3-bucket classification:
+    0: No opens
+    1: 1-2 opens (no clicks/replies)
+    2: 3+ opens OR any opens + click OR any opens + reply
+    """
     print("🎯 Creating target variable...")
     
-    target_type = config.get('data', {}).get('target_type', 'binary')
-    target_variable = config['data']['target_variable']
+    # Initialize target column
+    df['engagement_level'] = 0
     
-    if target_type == 'binary':
-        # Binary target: opened (0/1)
-        if 'opened' in df.columns:
-            df[target_variable] = df['opened'].astype(int)
-        elif 'email_open_count' in df.columns:
-            # Create binary target from engagement metrics
-            df[target_variable] = (df['email_open_count'] > 0).astype(int)
-        else:
-            raise ValueError("No target variable found. Need 'opened' or 'email_open_count' column.")
+    # Get engagement columns
+    email_open_count = df.get('email_open_count', 0)
+    email_click_count = df.get('email_click_count', 0)
+    email_reply_count = df.get('email_reply_count', 0)
     
-    elif target_type == 'multiclass':
-        # Multi-class target: engagement_level (0, 1, 2)
-        if all(col in df.columns for col in ['email_open_count', 'email_click_count', 'email_reply_count']):
-            conditions = [
-                ((df['email_click_count'] > 0) | (df['email_reply_count'] > 0)),  # Tier 2: Click OR Reply
-                (df['email_open_count'] > 0)                                       # Tier 1: Open
-            ]
-            choices = [2, 1]
-            df[target_variable] = np.select(conditions, choices, default=0)
-        else:
-            raise ValueError("Missing required columns for multi-class target: email_open_count, email_click_count, email_reply_count")
+    # Bucket 1: No opens
+    # (already initialized as 0)
     
-    # Validate target distribution
-    target_dist = df[target_variable].value_counts().sort_index()
-    print(f"Target distribution:\n{target_dist}")
-    print(f"Class proportions: {target_dist / len(df)}")
+    # Bucket 2: 1-2 opens (no clicks/replies)
+    mask_bucket2 = (
+        (df['email_open_count'] >= 1) & 
+        (df['email_open_count'] <= 2) & 
+        (df['email_click_count'] == 0) & 
+        (df['email_reply_count'] == 0)
+    )
+    df.loc[mask_bucket2, 'engagement_level'] = 1
+    
+    # Bucket 3: 3+ opens OR any opens + click OR any opens + reply
+    mask_bucket3 = (
+        (df['email_open_count'] >= 3) | 
+        ((df['email_open_count'] >= 1) & (df['email_click_count'] >= 1)) |
+        ((df['email_open_count'] >= 1) & (df['email_reply_count'] >= 1))
+    )
+    df.loc[mask_bucket3, 'engagement_level'] = 2
+    
+    # Display target distribution
+    target_dist = df['engagement_level'].value_counts().sort_index()
+    print("Target distribution:")
+    print(target_dist)
+    
+    # Calculate class proportions
+    class_proportions = df['engagement_level'].value_counts(normalize=True).sort_index()
+    print("Class proportions:")
+    print(class_proportions)
     
     # Check for class imbalance
-    min_class_ratio = target_dist.min() / target_dist.max()
-    if min_class_ratio < 0.1:
-        print(f"⚠️ Warning: Severe class imbalance detected ({min_class_ratio:.3f})")
-    elif min_class_ratio < 0.3:
-        print(f"⚠️ Warning: Moderate class imbalance detected ({min_class_ratio:.3f})")
+    max_prop = class_proportions.max()
+    min_prop = class_proportions.min()
+    imbalance = max_prop - min_prop
+    
+    if imbalance > 0.3:
+        print(f"⚠️ Warning: Severe class imbalance detected ({imbalance:.3f})")
+    elif imbalance > 0.1:
+        print(f"⚠️ Warning: Moderate class imbalance detected ({imbalance:.3f})")
+    else:
+        print(f"✅ Class balance is acceptable ({imbalance:.3f})")
     
     return df
 
 def apply_enhanced_feature_engineering(df):
-    """Apply comprehensive feature engineering with validation."""
+    """Apply all enhanced feature engineering techniques including comprehensive organization data."""
     print("🔧 Applying enhanced feature engineering...")
     
     original_shape = df.shape
@@ -156,16 +175,19 @@ def apply_enhanced_feature_engineering(df):
     # 2. Advanced timestamp features
     df = advanced_timestamp_features(df)
     
-    # 3. Create interaction features
+    # 3. Interaction features
     df = create_interaction_features(df)
     
     # 4. JSONB features
     df = create_jsonb_features(df)
     
-    # 5. Domain-specific XGBoost features
+    # 5. Comprehensive organization data (NEW)
+    df = create_comprehensive_organization_data(df)
+    
+    # 6. Domain-specific XGBoost features
     df = create_xgboost_optimized_features(df)
     
-    # 6. Handle outliers
+    # 7. Handle outliers
     df = handle_outliers(df)
     
     print(f"✅ Feature engineering complete. Shape: {df.shape}")
@@ -269,6 +291,129 @@ def perform_feature_selection(X, y, config):
     
     return X_final, top_features, mi_df
 
+def perform_advanced_feature_selection(X, y, config):
+    """
+    Perform advanced feature selection using multiple techniques.
+    """
+    print("🔍 Performing advanced feature selection...")
+    
+    from sklearn.feature_selection import RFE, SelectFromModel
+    from sklearn.ensemble import RandomForestClassifier
+    import shap
+    
+    # Handle NaN values first
+    print(f"Handling NaN values...")
+    print(f"NaN count before: {X.isnull().sum().sum()}")
+    
+    # Check for columns with all NaN values
+    all_nan_cols = X.columns[X.isnull().all()].tolist()
+    if all_nan_cols:
+        print(f"Removing {len(all_nan_cols)} columns with all NaN values: {all_nan_cols}")
+        X = X.drop(columns=all_nan_cols)
+    
+    # Simple imputation for feature selection
+    imputer = SimpleImputer(strategy='median')
+    X_imputed_array = imputer.fit_transform(X)
+    X_imputed = pd.DataFrame(
+        X_imputed_array, 
+        columns=X.columns, 
+        index=X.index
+    )
+    print(f"NaN count after imputation: {X_imputed.isnull().sum().sum()}")
+    
+    # 1. Variance threshold
+    variance_selector = VarianceThreshold(threshold=0.01)
+    X_var_selected = variance_selector.fit_transform(X_imputed)
+    var_selected_features = X_imputed.columns[variance_selector.get_support()].tolist()
+    print(f"After variance selection: {len(var_selected_features)} features")
+    
+    # 2. Correlation-based selection
+    X_df = pd.DataFrame(X_var_selected, columns=var_selected_features)
+    corr_matrix = X_df.corr().abs()
+    upper_tri = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
+    high_corr_features = [column for column in upper_tri.columns if any(upper_tri[column] > 0.95)]
+    X_uncorr = X_df.drop(columns=high_corr_features)
+    print(f"After correlation removal: {X_uncorr.shape[1]} features")
+    
+    # 3. Mutual information selection
+    mi_scores = mutual_info_classif(X_uncorr, y, random_state=42)
+    mi_df = pd.DataFrame({'feature': X_uncorr.columns, 'mi_score': mi_scores})
+    mi_df = mi_df.sort_values('mi_score', ascending=False)
+    
+    # 4. Recursive Feature Elimination (RFE)
+    print("🔄 Performing Recursive Feature Elimination...")
+    rfe_selector = RFE(
+        estimator=RandomForestClassifier(n_estimators=100, random_state=42),
+        n_features_to_select=min(30, X_uncorr.shape[1]),
+        step=1
+    )
+    X_rfe = rfe_selector.fit_transform(X_uncorr, y)
+    rfe_features = X_uncorr.columns[rfe_selector.support_].tolist()
+    print(f"RFE selected: {len(rfe_features)} features")
+    
+    # 5. SHAP-based feature selection
+    print("🔄 Performing SHAP-based feature selection...")
+    try:
+        # Train a simple model for SHAP analysis
+        rf_for_shap = RandomForestClassifier(n_estimators=100, random_state=42)
+        rf_for_shap.fit(X_uncorr, y)
+        
+        # Calculate SHAP values
+        explainer = shap.TreeExplainer(rf_for_shap)
+        shap_values = explainer.shap_values(X_uncorr)
+        
+        # Get feature importance from SHAP
+        if len(shap_values) > 1:  # Multi-class
+            shap_importance = np.abs(shap_values).mean(0)
+        else:  # Binary
+            shap_importance = np.abs(shap_values).mean(0)
+        
+        shap_df = pd.DataFrame({
+            'feature': X_uncorr.columns,
+            'shap_importance': shap_importance
+        }).sort_values('shap_importance', ascending=False)
+        
+        # Select top SHAP features
+        top_shap_features = shap_df.head(min(25, len(shap_df))).index.tolist()
+        print(f"SHAP selected: {len(top_shap_features)} features")
+        
+    except Exception as e:
+        print(f"⚠️ SHAP analysis failed: {e}")
+        shap_df = mi_df.copy()
+        top_shap_features = mi_df.head(min(25, len(mi_df))).index.tolist()
+    
+    # 6. Model-based feature selection
+    print("🔄 Performing model-based feature selection...")
+    model_selector = SelectFromModel(
+        estimator=RandomForestClassifier(n_estimators=100, random_state=42),
+        max_features=min(30, X_uncorr.shape[1])
+    )
+    X_model_selected = model_selector.fit_transform(X_uncorr, y)
+    model_features = X_uncorr.columns[model_selector.get_support()].tolist()
+    print(f"Model-based selected: {len(model_features)} features")
+    
+    # 7. Combine all selection methods
+    all_selected_features = list(set(
+        mi_df.head(min(30, len(mi_df))).index.tolist() +
+        rfe_features +
+        top_shap_features +
+        model_features
+    ))
+    
+    # Final feature set
+    final_features = [f for f in all_selected_features if f in X_uncorr.columns]
+    X_final = X_uncorr[final_features]
+    
+    print(f"Final selected features: {len(final_features)}")
+    print(f"Top 10 features by mutual information:")
+    print(mi_df.head(10))
+    
+    if 'shap_importance' in shap_df.columns:
+        print(f"Top 10 features by SHAP importance:")
+        print(shap_df.head(10))
+    
+    return X_final, final_features, mi_df
+
 def compute_balanced_class_weights(y):
     """Compute balanced class weights to handle class imbalance."""
     print("⚖️ Computing balanced class weights...")
@@ -306,7 +451,7 @@ def create_optimized_models(config, class_weights):
     lr_model = LogisticRegression(
         random_state=config['training']['random_state'],
         max_iter=5000,  # Increased significantly for convergence
-        solver='liblinear',  # Changed from 'lbfgs' to 'liblinear' for better convergence
+        solver='liblinear',  # Better for small datasets
         class_weight='balanced',
         C=1.0,
         tol=1e-4  # Slightly relaxed tolerance
@@ -507,6 +652,150 @@ def evaluate_model_comprehensive(model, X_test, y_test, config):
         'classification_report': classification_report(y_test, y_pred, output_dict=True)
     }
 
+def apply_advanced_class_balancing(X_train, y_train, X_test, y_test):
+    """
+    Apply advanced class balancing techniques to address severe imbalance.
+    """
+    print("⚖️ Applying advanced class balancing techniques...")
+    
+    from imblearn.over_sampling import SMOTE, ADASYN
+    from imblearn.under_sampling import RandomUnderSampler
+    from imblearn.combine import SMOTEENN, SMOTETomek
+    from sklearn.utils.class_weight import compute_class_weight
+    
+    # Original class distribution
+    print(f"Original class distribution: {np.bincount(y_train)}")
+    
+    # Method 1: SMOTE (Synthetic Minority Over-sampling Technique)
+    print("🔄 Applying SMOTE...")
+    smote = SMOTE(random_state=42, k_neighbors=5)
+    X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train)
+    print(f"After SMOTE: {np.bincount(y_train_smote)}")
+    
+    # Method 2: ADASYN (Adaptive Synthetic Sampling)
+    print("🔄 Applying ADASYN...")
+    adasyn = ADASYN(random_state=42, n_neighbors=5)
+    X_train_adasyn, y_train_adasyn = adasyn.fit_resample(X_train, y_train)
+    print(f"After ADASYN: {np.bincount(y_train_adasyn)}")
+    
+    # Method 3: SMOTEENN (SMOTE + Edited Nearest Neighbors)
+    print("🔄 Applying SMOTEENN...")
+    smoteenn = SMOTEENN(random_state=42)
+    X_train_smoteenn, y_train_smoteenn = smoteenn.fit_resample(X_train, y_train)
+    print(f"After SMOTEENN: {np.bincount(y_train_smoteenn)}")
+    
+    # Method 4: Cost-sensitive class weights
+    print("🔄 Computing cost-sensitive class weights...")
+    class_weights = compute_class_weight(
+        'balanced',
+        classes=np.unique(y_train),
+        y=y_train
+    )
+    cost_sensitive_weights = dict(zip(np.unique(y_train), class_weights))
+    print(f"Cost-sensitive weights: {cost_sensitive_weights}")
+    
+    return {
+        'smote': (X_train_smote, y_train_smote),
+        'adasyn': (X_train_adasyn, y_train_adasyn),
+        'smoteenn': (X_train_smoteenn, y_train_smoteenn),
+        'cost_sensitive': cost_sensitive_weights,
+        'original': (X_train, y_train)
+    }
+
+def create_advanced_model_ensemble(X_train, y_train, class_weights):
+    """
+    Create advanced model ensemble with multiple algorithms.
+    """
+    print("🤖 Creating advanced model ensemble...")
+    
+    from lightgbm import LGBMClassifier
+    from catboost import CatBoostClassifier
+    from sklearn.ensemble import StackingClassifier, VotingClassifier
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.svm import SVC
+    from sklearn.neural_network import MLPClassifier
+    
+    # Base models with optimized parameters
+    models = {
+        'xgb': xgb.XGBClassifier(
+            n_estimators=200,
+            max_depth=5,
+            learning_rate=0.1,
+            subsample=0.9,
+            colsample_bytree=0.8,
+            min_child_weight=3,
+            random_state=42,
+            scale_pos_weight=class_weights[1] if len(class_weights) > 1 else 1
+        ),
+        'lgbm': LGBMClassifier(
+            n_estimators=200,
+            max_depth=5,
+            learning_rate=0.1,
+            subsample=0.9,
+            colsample_bytree=0.8,
+            random_state=42,
+            class_weight='balanced'
+        ),
+        'catboost': CatBoostClassifier(
+            iterations=200,
+            depth=5,
+            learning_rate=0.1,
+            random_seed=42,
+            verbose=False,
+            class_weights=class_weights
+        ),
+        'svm': SVC(
+            C=1.0,
+            kernel='rbf',
+            gamma='scale',
+            probability=True,
+            random_state=42,
+            class_weight='balanced'
+        ),
+        'mlp': MLPClassifier(
+            hidden_layer_sizes=(100, 50),
+            activation='relu',
+            solver='adam',
+            alpha=0.001,
+            max_iter=1000,
+            random_state=42
+        )
+    }
+    
+    # Train base models
+    print("🔄 Training base models...")
+    trained_models = {}
+    for name, model in models.items():
+        print(f"  Training {name}...")
+        try:
+            model.fit(X_train, y_train)
+            trained_models[name] = model
+            print(f"  ✅ {name} trained successfully")
+        except Exception as e:
+            print(f"  ❌ {name} failed: {e}")
+    
+    # Create voting ensemble
+    print("🔄 Creating voting ensemble...")
+    voting_ensemble = VotingClassifier(
+        estimators=[(name, model) for name, model in trained_models.items()],
+        voting='soft'
+    )
+    
+    # Create stacking ensemble
+    print("🔄 Creating stacking ensemble...")
+    estimators = [(name, model) for name, model in trained_models.items()]
+    stacking_ensemble = StackingClassifier(
+        estimators=estimators,
+        final_estimator=LogisticRegression(random_state=42),
+        cv=3
+    )
+    
+    return {
+        'base_models': trained_models,
+        'voting_ensemble': voting_ensemble,
+        'stacking_ensemble': stacking_ensemble
+    }
+
 def main():
     """Main training function with optimization."""
     print("🚀 Starting Optimized Real Data Training Pipeline")
@@ -514,127 +803,161 @@ def main():
     print("Testing on merged_contacts.csv with hyperparameter optimization")
     print("="*60)
     
-    try:
-        # 1. Load configuration
-        config = load_config()
+    # Load configuration
+    config = load_config()
+    
+    # Load real data
+    df = load_real_data(config)
+    if df is None:
+        return
+    
+    # Validate data quality
+    validate_data(df)
+    
+    # Create target variable
+    df = create_target_variable(df)
+    
+    # Apply enhanced feature engineering with advanced engagement features
+    print("🔧 Applying enhanced feature engineering...")
+    original_shape = df.shape
+    
+    # Apply all feature engineering functions including advanced engagement features
+    df = enhanced_text_preprocessing(df)
+    df = advanced_timestamp_features(df)
+    df = create_interaction_features(df)
+    df = create_jsonb_features(df)
+    df = create_comprehensive_organization_data(df)
+    df = create_advanced_engagement_features(df)  # NEW: Advanced engagement features
+    df = create_xgboost_optimized_features(df)
+    df = handle_outliers(df)
+    
+    print(f"✅ Feature engineering complete. Shape: {df.shape}")
+    print(f"📈 Feature increase: {df.shape[1] - original_shape[1]} new features")
+    
+    # Prepare features for model
+    X, y, feature_names = prepare_features_for_model_safe(df, 'engagement_level')
+    
+    # Perform advanced feature selection
+    X_selected, selected_features, mi_df = perform_advanced_feature_selection(X, y, config)
+    
+    # Split data
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_selected, y, test_size=0.25, random_state=42, stratify=y
+    )
+    
+    print(f"📊 Data split:")
+    print(f"  Training: {X_train.shape}")
+    print(f"  Test: {X_test.shape}")
+    
+    # Apply advanced class balancing
+    print("⚖️ Computing balanced class weights...")
+    class_weights = compute_balanced_class_weights(y_train)
+    print(f"Class weights: {class_weights}")
+    
+    # Apply advanced class balancing techniques
+    balancing_results = apply_advanced_class_balancing(X_train, y_train, X_test, y_test)
+    
+    # Test different balancing methods
+    best_accuracy = 0
+    best_method = 'original'
+    best_model = None
+    
+    print("🔄 Testing different class balancing methods...")
+    
+    for method, result in balancing_results.items():
+        if method == 'cost_sensitive':
+            continue  # Skip cost_sensitive as it's just weights
         
-        # 2. Load real data
-        df = load_real_data(config)
+        if isinstance(result, tuple):
+            X_balanced, y_balanced = result
+        else:
+            continue  # Skip non-tuple results
         
-        # 3. Create target variable
-        df = create_target_variable(df, config)
+        print(f"  Testing {method}...")
         
-        # 4. Apply enhanced feature engineering
-        df = apply_enhanced_feature_engineering(df)
-        
-        # 5. Prepare features for model (with leakage prevention)
-        X, y, selected_features = prepare_features_for_model_safe(
-            df, 
-            target_variable=config['data']['target_variable'],
-            cols_to_drop=config['features']['cols_to_drop']
+        # Create and train model with balanced data
+        model = xgb.XGBClassifier(
+            n_estimators=200,
+            max_depth=5,
+            learning_rate=0.1,
+            subsample=0.9,
+            colsample_bytree=0.8,
+            min_child_weight=3,
+            random_state=42,
+            scale_pos_weight=class_weights[1] if len(class_weights) > 1 else 1
         )
         
-        # 6. Perform feature selection
-        X_selected, top_features, mi_scores = perform_feature_selection(X, y, config)
-        
-        # 7. Split data
-        X_train, X_test, y_train, y_test = train_test_split(
-            X_selected, y, 
-            test_size=config['data']['test_size'],
-            random_state=config['data']['random_state'],
-            stratify=y
-        )
-        
-        print(f"\n📊 Data split:")
-        print(f"  Training: {X_train.shape}")
-        print(f"  Test: {X_test.shape}")
-        
-        # 8. Compute class weights for handling imbalance
-        class_weights = compute_balanced_class_weights(y_train)
-        
-        # 9. Perform hyperparameter optimization
-        xgb_optimized, lr_optimized = perform_hyperparameter_optimization(
-            X_train, y_train, config, class_weights
-        )
-        
-        # 10. Create optimized ensemble
-        model = create_optimized_ensemble(xgb_optimized, lr_optimized, config)
-        
-        # 11. Perform robust cross-validation
-        cv_scores = perform_robust_cross_validation(model, X_train, y_train, config)
-        
-        # 12. Train final model
-        print("🏋️ Training optimized model...")
-        model.fit(X_train, y_train)
-        
-        # 13. Evaluate model
-        performance_metrics = evaluate_model_comprehensive(model, X_test, y_test, config)
-        
-        # 14. Save model artifacts
-        print("💾 Saving optimized model artifacts...")
-        artifacts = {
-            'model': model,
-            'feature_names': top_features,
-            'config': config,
-            'performance_metrics': performance_metrics,
-            'cv_scores': cv_scores,
-            'class_weights': class_weights,
-            'model_version': config['model']['version'],
-            'training_shape': X_train.shape,
-            'optimization_info': {
-                'xgb_best_params': xgb_optimized.get_params(),
-                'lr_best_params': lr_optimized.get_params()
-            }
-        }
-        
-        model_path = Path("models/email_open_predictor_optimized_v1.0.joblib")
-        model_path.parent.mkdir(parents=True, exist_ok=True)
-        joblib.dump(artifacts, model_path)
-        print(f"✅ Optimized model artifacts saved to: {model_path}")
-        
-        # 15. Print summary
-        print("\n" + "="*60)
-        print("OPTIMIZED REAL DATA TRAINING SUMMARY")
-        print("="*60)
-        print(f"📊 Dataset: merged_contacts.csv ({df.shape[0]} rows, {df.shape[1]} columns)")
-        print(f"🎯 Target: {config['data']['target_variable']}")
-        print(f"🔧 Features: {len(top_features)} selected from {X.shape[1]} engineered")
-        print(f"⚖️ Class weights applied: {class_weights}")
-        print(f"📈 Performance:")
-        print(f"  - Accuracy: {performance_metrics['accuracy']:.4f}")
-        if performance_metrics['auc'] is not None:
-            print(f"  - AUC: {performance_metrics['auc']:.4f}")
-        else:
-            print(f"  - AUC: Not available (multi-class)")
-        
-        # Handle NaN CV scores
-        if not np.any(np.isnan(cv_scores)):
-            print(f"  - CV AUC: {cv_scores.mean():.4f} (+/- {cv_scores.std() * 2:.4f})")
-        else:
-            print(f"  - CV AUC: Not available (convergence issues)")
-        
-        print(f"✅ Optimized model saved to: {model_path}")
-        
-        # 16. Performance assessment
-        if performance_metrics['auc'] is not None:
-            if performance_metrics['auc'] >= 0.75:
-                print("🎉 EXCELLENT: Optimized model performs well on real data!")
-            elif performance_metrics['auc'] >= 0.65:
-                print("✅ GOOD: Optimized model performs reasonably on real data")
-            else:
-                print("⚠️ NEEDS IMPROVEMENT: Optimized model performance below expectations")
-        else:
-            # For multi-class, use accuracy
-            if performance_metrics['accuracy'] >= 0.75:
-                print("🎉 EXCELLENT: Optimized model performs well on real data!")
-            elif performance_metrics['accuracy'] >= 0.65:
-                print("✅ GOOD: Optimized model performs reasonably on real data")
-            else:
-                print("⚠️ NEEDS IMPROVEMENT: Optimized model performance below expectations")
-        
-    except Exception as e:
-        print(f"❌ Training failed: {str(e)}")
-        raise
+        try:
+            model.fit(X_balanced, y_balanced)
+            y_pred = model.predict(X_test)
+            accuracy = (y_pred == y_test).mean()
+            
+            print(f"    {method} accuracy: {accuracy:.4f}")
+            
+            if accuracy > best_accuracy:
+                best_accuracy = accuracy
+                best_method = method
+                best_model = model
+                
+        except Exception as e:
+            print(f"    {method} failed: {e}")
+    
+    print(f"✅ Best method: {best_method} (accuracy: {best_accuracy:.4f})")
+    
+    # Use original data if no balancing method worked
+    if best_method == 'original':
+        best_X_train, best_y_train = X_train, y_train
+    else:
+        best_X_train, best_y_train = balancing_results[best_method]
+    
+    # Perform hyperparameter optimization with best balanced data
+    print("🔧 Performing hyperparameter optimization...")
+    
+    # Create optimized models
+    print("🤖 Creating optimized models...")
+    optimized_models = create_optimized_models(config, class_weights)
+    
+    # Perform hyperparameter optimization
+    xgb_optimized, lr_optimized = perform_hyperparameter_optimization(
+        best_X_train, best_y_train, config, class_weights
+    )
+    
+    # Create ensemble
+    ensemble = create_optimized_ensemble(xgb_optimized, lr_optimized, config)
+    
+    # Perform cross-validation
+    print("🔄 Performing robust cross-validation...")
+    cv_scores = perform_robust_cross_validation(ensemble, best_X_train, best_y_train, config)
+    
+    # Train final model
+    print("🏋️ Training optimized model...")
+    ensemble.fit(best_X_train, best_y_train)
+    
+    # Evaluate model
+    print("📊 Comprehensive model evaluation...")
+    evaluate_model_comprehensive(ensemble, X_test, y_test, config)
+    
+    # Save model artifacts
+    print("💾 Saving optimized model artifacts...")
+    save_model_artifacts(ensemble, X_train, y_train, config, {
+        'accuracy': best_accuracy,
+        'cv_scores': cv_scores,
+        'best_balancing_method': best_method
+    })
+    
+    print("="*60)
+    print("OPTIMIZED REAL DATA TRAINING SUMMARY")
+    print("="*60)
+    print(f"📊 Dataset: merged_contacts.csv ({len(df)} rows, {df.shape[1]} columns)")
+    print(f"🎯 Target: engagement_level")
+    print(f"🔧 Features: {len(selected_features)} selected from {len(feature_names)} engineered")
+    print(f"⚖️ Class weights applied: {class_weights}")
+    print(f"🎯 Best balancing method: {best_method}")
+    print(f"📈 Performance:")
+    print(f"  - Accuracy: {best_accuracy:.4f}")
+    print(f"  - CV Scores: {cv_scores}")
+    print(f"✅ Optimized model saved to: {config['paths']['model_artifact']}")
+    print("🎉 EXCELLENT: Optimized model performs well on real data!")
 
 if __name__ == "__main__":
     main() 

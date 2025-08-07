@@ -1,0 +1,17 @@
+{
+  "xgboost_params": {
+    "colsample_bytree": 0.8,
+    "gamma": 0,
+    "learning_rate": 0.06,
+    "max_depth": 7,
+    "min_child_weight": 1,
+    "n_estimators": 200,
+    "subsample": 0.8,
+    "reg_alpha": 0,
+    "reg_lambda": 0.5,
+    "scale_pos_weight": 1.0
+  },
+  "cv_score": 1.0,
+  "tuning_date": "2025-08-06 19:17:39",
+  "model_version": "1.0"
+}

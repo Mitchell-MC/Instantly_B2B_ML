@@ -232,18 +232,15 @@ def main():
     print(f"  Not opened: {target_dist[0]:,} ({target_dist[0]/len(df)*100:.1f}%)")
     print(f"  Opened: {target_dist[1]:,} ({target_dist[1]/len(df)*100:.1f}%)")
     
-    # Feature engineering
+    # Apply feature engineering
     df = create_xgboost_optimized_features(df)
-    
-    # Categorical encoding
     df, label_encoders = encode_categorical_features(
-        df, 
-        target_variable=target_variable,
+        df,
         max_categories=config['features']['max_categories']
     )
     
-    # Prepare features
-    X, y = prepare_features_for_model(
+    # Prepare features for model
+    X, y, selected_features = prepare_features_for_model(
         df, 
         target_variable=target_variable,
         cols_to_drop=config['features']['cols_to_drop']

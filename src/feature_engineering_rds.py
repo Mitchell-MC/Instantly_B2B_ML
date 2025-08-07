@@ -125,11 +125,33 @@ def advanced_timestamp_features(df):
         for col in timestamp_cols:
             if col in df.columns and col != 'timestamp_created' and pd.api.types.is_datetime64_any_dtype(df[col]):
                 feature_name = f"days_between_{col.replace('timestamp_', '')}_and_created"
-                df[feature_name] = (df[col] - ref_date).dt.days
                 
-                # Additional temporal features
-                df[f"{feature_name}_abs"] = df[feature_name].abs()
-                df[f"has_{col.replace('timestamp_', '')}"] = df[col].notna().astype(int)
+                # Handle timezone differences
+                try:
+                    # Ensure both columns have the same timezone awareness
+                    col_data = df[col]
+                    ref_data = ref_date
+                    
+                    # If one is tz-aware and the other isn't, localize the naive one
+                    if col_data.dt.tz is not None and ref_data.dt.tz is None:
+                        ref_data = ref_data.dt.tz_localize('UTC')
+                    elif col_data.dt.tz is None and ref_data.dt.tz is not None:
+                        col_data = col_data.dt.tz_localize('UTC')
+                    elif col_data.dt.tz is not None and ref_data.dt.tz is not None:
+                        # Both are tz-aware, convert to same timezone
+                        col_data = col_data.dt.tz_convert('UTC')
+                        ref_data = ref_data.dt.tz_convert('UTC')
+                    
+                    df[feature_name] = (col_data - ref_data).dt.days
+                    
+                    # Additional temporal features
+                    df[f"{feature_name}_abs"] = df[feature_name].abs()
+                    df[f"has_{col.replace('timestamp_', '')}"] = df[col].notna().astype(int)
+                    
+                except Exception as e:
+                    print(f"Warning: Could not calculate time difference for {col}: {e}")
+                    # Create a simple has_value feature instead
+                    df[f"has_{col.replace('timestamp_', '')}"] = df[col].notna().astype(int)
         
         # Recency from current time
         try:

@@ -1,0 +1,528 @@
+[
+  {
+    "endpoint": "/api/v2/campaigns/analytics/overview",
+    "total_entries": 1,
+    "all_columns": [
+      "bounced_count",
+      "emails_sent_count",
+      "link_click_count",
+      "link_click_count_unique",
+      "link_click_count_unique_by_step",
+      "new_leads_contacted_count",
+      "open_count",
+      "open_count_unique",
+      "open_count_unique_by_step",
+      "reply_count",
+      "reply_count_unique",
+      "reply_count_unique_by_step",
+      "total_closed",
+      "total_interested",
+      "total_meeting_booked",
+      "total_meeting_completed",
+      "total_opportunities",
+      "total_opportunity_value",
+      "unsubscribed_count"
+    ],
+    "nested_structures": {},
+    "sample_data": {
+      "open_count": 92831,
+      "open_count_unique": 35580,
+      "open_count_unique_by_step": 64758,
+      "link_click_count": 8647,
+      "link_click_count_unique": 4815,
+      "link_click_count_unique_by_step": 5910,
+      "reply_count": 66,
+      "reply_count_unique": 66,
+      "reply_count_unique_by_step": 69,
+      "bounced_count": 442,
+      "unsubscribed_count": 0,
+      "emails_sent_count": 134673,
+      "new_leads_contacted_count": 49669,
+      "total_opportunities": 9,
+      "total_opportunity_value": 14000,
+      "total_interested": 14,
+      "total_meeting_booked": 0,
+      "total_meeting_completed": 0,
+      "total_closed": 0
+    }
+  },
+  {
+    "endpoint": "/api/v2/accounts",
+    "total_entries": 10,
+    "all_columns": [
+      "added_by",
+      "daily_limit",
+      "email",
+      "enable_slow_ramp",
+      "first_name",
+      "inbox_placement_test_limit",
+      "is_managed_account",
+      "last_name",
+      "modified_by",
+      "organization",
+      "provider_code",
+      "sending_gap",
+      "setup_pending",
+      "stat_warmup_score",
+      "status",
+      "timestamp_created",
+      "timestamp_updated",
+      "timestamp_warmup_start",
+      "warmup",
+      "warmup_status"
+    ],
+    "nested_structures": {
+      "warmup": [
+        "advanced",
+        "increment",
+        "limit"
+      ]
+    },
+    "sample_data": {
+      "email": "akrstich@beamdata.ai",
+      "timestamp_created": "2025-06-12T17:25:47.206Z",
+      "timestamp_updated": "2025-06-12T17:25:47.206Z",
+      "first_name": "Alex",
+      "last_name": "Krstich",
+      "organization": "f44277de-69b2-4bc3-a69c-28afd4094123",
+      "warmup_status": 0,
+      "provider_code": 2,
+      "setup_pending": false,
+      "is_managed_account": false,
+      "added_by": "95e34077-5b10-4ff2-ada7-a9659a12e637",
+      "modified_by": "95e34077-5b10-4ff2-ada7-a9659a12e637",
+      "status": 1,
+      "stat_warmup_score": 0
+    }
+  },
+  {
+    "endpoint": "/api/v2/campaigns",
+    "total_entries": 10,
+    "all_columns": [
+      "campaign_schedule",
+      "daily_limit",
+      "email_list",
+      "email_tag_list",
+      "id",
+      "link_tracking",
+      "name",
+      "open_tracking",
+      "organization",
+      "sequences",
+      "status",
+      "stop_on_auto_reply",
+      "stop_on_reply",
+      "text_only",
+      "timestamp_created",
+      "timestamp_updated"
+    ],
+    "nested_structures": {
+      "campaign_schedule": [
+        "end_date",
+        "schedules",
+        "start_date"
+      ],
+      "sequences": [
+        "steps"
+      ]
+    },
+    "sample_data": {
+      "id": "f58215b3-0ca5-4929-a92a-cae92313534b",
+      "name": "Louise_HealthCare_50-100_UAE",
+      "status": 3,
+      "campaign_schedule": {
+        "schedules": [
+          {
+            "name": "New schedule",
+            "timing": {
+              "from": "09:00",
+              "to": "17:00"
+            },
+            "days": {
+              "1": true,
+              "2": true,
+              "3": true,
+              "4": true,
+              "5": true
+            },
+            "timezone": "Asia/Aden"
+          }
+        ],
+        "start_date": "",
+        "end_date": ""
+      },
+      "timestamp_created": "2025-05-07T19:54:10.459Z",
+      "timestamp_updated": "2025-05-22T19:09:56.993Z",
+      "sequences": [
+        {
+          "steps": [
+            {
+              "type": "email",
+              "delay": 5,
+              "variants": [
+                {
+                  "subject": "{{firstName}} who\u2019s driving your AI upskilling?",
+                  "body": "<div>{{firstName}},</div><div><br /></div><div>84% of healthcare and pharma leaders say AI plans stall due to internal skill gaps. You may have the data and tools\u2014but without the skills, nothing moves.</div><div><br /></div><div>Our <a href=\"https://weclouddata.com/corporate-training/?utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=saudi-healthcare\">AI upskilling tracks</a> are designed for:</div><ul data-start=\"199\" data-end=\"336\"><li data-start=\"199\" data-end=\"250\"><div>Clinical and research teams\u2014not just tech staff</div></li><li data-start=\"251\" data-end=\"295\"><div>Real-world use cases\u2014not generic lessons</div></li><li data-start=\"296\" data-end=\"336\"><div>Fast onboarding in Arabic or English</div></li></ul><div>{{RANDOM| Is this something you\u2019re tackling this year? | Do you have any time this or next week for a quick chat about this? | Should I send more details?}}</div><div><br /></div><div>{{RANDOM | Best, | Regards, | Cheers,}}</div><div>WeCloudData</div>"
+                },
+                {
+                  "subject": "{{first_name}}, how AI could help {{companyName}}",
+                  "body": "<div>{{firstName}},</div><div><br /></div><div>Imagine this- {{companyName}}'s team uses AI to flag patient risk early, optimize scheduling, reduce admin load \u2014 and they actually trust the system doing it.</div><div><br /></div><div>It\u2019s possible. and it doesn\u2019t require long certifications or external hires.</div><div><br /></div><div>If you\u2019re thinking about how to future-proof your\u00a0<a href=\"https://weclouddata.com/corporate-training/?utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=saudi-healthcare\">team from AI</a> (and align with Saudi Vision 2030), this might be worth a conversation.</div><div><br /></div><div>\u2014 want me to send over a quick personalized 2 min presentation?</div><div><br /></div><div>Warm Regards,</div><div>WeCloudData</div>"
+                }
+              ]
+            },
+            {
+              "type": "email",
+              "delay": 2,
+              "variants": [
+                {
+                  "subject": "",
+                  "body": "<div>{{firstName}}\u00a0</div><div><br /></div><div>By 2030, Saudi expects AI will be baked into every layer of saudi healthcare + pharma. We\u2019re already seeing mandates trickle in \u2014 predictive care, digital trials, smart diagnostics.</div><div><br /></div><div>Your team can\u2019t wait for \u201cAI specialists.\u201d but they need to <a href=\"https://weclouddata.com/corporate-training/?utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=saudi-healthcare\">upskilled with AI</a> to become them. We\u2019re helping Saudi orgs upskill now, fast \u2014still open to a quick chat? Book your slot\u00a0<a href=\"https://meetings.hubspot.com/warney/talk-to-wecloud-program-advisor?uuid=f772e830-c1fe-4c3a-af95-34b2bb557260&amp;utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=saudi-healthcare\">HERE.</a></div><div><br /></div><div>Regards,</div><div>WeCloudData</div>"
+                },
+                {
+                  "subject": "{{firstName}} you will find this helpful",
+                  "body": "<div>{{firstName}} its me again,</div><div><br /></div><div>In case you are confused how would AI &amp; Cloud Computing would playout in a healthcare setting, we broke it down in a short blog \u2014 tools used, use cases: <a href=\"https://weclouddata.com/blog/cloud-computing-in-the-healthcare-industry/?utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=saudi-healthcare\">link to blog</a></div><div><br /></div><div>Want me to send over a quick overview deck of we can help\u00a0<a href=\"https://weclouddata.com/corporate-training/?utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=saudi-healthcare\">upskill</a> \u00a0{{companyName}} employees?</div><div><br /></div><div>Best,</div><div>WeCloudData</div>"
+                }
+              ]
+            },
+            {
+              "type": "email",
+              "delay": 1,
+              "variants": [
+                {
+                  "subject": "",
+                  "body": "<div>{{firstName}}\u00a0</div><div><br /></div><div>We built a healthcare-focused <a href=\"https://weclouddata.com/corporate-training/?utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=saudi-healthcare\">AI upskilling program</a> to close that gap \u2014 designed for frontline workers, admins, and medical leaders. short sessions. localized content. real use cases.</div><div><br /></div><div>It\u2019s not about turning doctors into data scientists. It\u2019s about helping them make better decisions, faster.</div><div><br /></div><div>\u2014 Lets <a href=\"https://meetings.hubspot.com/warney/talk-to-wecloud-program-advisor?uuid=f772e830-c1fe-4c3a-af95-34b2bb557260&amp;utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=saudi-healthcare\">chat</a> next week?</div><div><br /></div><div>{{RANDOM | Best, | Regards, | Cheers,}}</div><div>WeCloudData</div><div><br /></div><div><br /></div>"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "text_only": false,
+      "email_list": [
+        "louise.c@weclouddata.net",
+        "louise.c@weclouddata.org",
+        "louise.c@weclouddata.us",
+        "louise.cheng@weclouddata.org",
+        "louise.cheng@weclouddata.us",
+        "louise@weclouddata.net",
+        "louise@weclouddata.org",
+        "louise@weclouddata.us",
+        "louise_c@weclouddata.org",
+        "louise_c@weclouddata.us"
+      ],
+      "daily_limit": 300,
+      "stop_on_reply": true,
+      "email_tag_list": [],
+      "link_tracking": true,
+      "open_tracking": true,
+      "stop_on_auto_reply": false,
+      "organization": "f44277de-69b2-4bc3-a69c-28afd4094123"
+    }
+  },
+  {
+    "endpoint": "/api/v2/emails",
+    "total_entries": 10,
+    "all_columns": [
+      "body",
+      "campaign_id",
+      "eaccount",
+      "from_address_email",
+      "id",
+      "is_focused",
+      "is_unread",
+      "lead",
+      "message_id",
+      "organization_id",
+      "step",
+      "subject",
+      "thread_id",
+      "timestamp_created",
+      "timestamp_email",
+      "to_address_email_list",
+      "ue_type"
+    ],
+    "nested_structures": {
+      "body": [
+        "html"
+      ]
+    },
+    "sample_data": {
+      "id": "019885c6-03e2-7128-80fd-830a941c25e1",
+      "timestamp_created": "2025-08-07T18:23:20.000Z",
+      "timestamp_email": "2025-08-07T18:23:20.000Z",
+      "message_id": "<b79bb03e-bdbb-45e3-a980-cb3c2fe7caf8@weclouddata.net>",
+      "subject": "solving nTop's funding issue",
+      "to_address_email_list": "marcjacobs@ntop.com",
+      "body": {
+        "html": "<div>Marc </div><div><br /></div><div>Its me again, I know good training usually dies in approval hell. </div><div><br /></div><div>That\u2019s why we designed WeCloudData to work with your nTop's funding. Just plug it into your L&D or skilling budget and your team\u2019s ready for <a href=\"https://thoughprox.com/lt/2251799882721473/CyF40ryed-ONi5ezMNxh7\">AI upskilling.</a></div><div><br /></div><div>Interested in a frictionless rollout, should I send funding options?</div><div><br /></div><div>Best,</div><div>WeCloudData.</div>"
+      },
+      "organization_id": "f44277de-69b2-4bc3-a69c-28afd4094123",
+      "eaccount": "louise.c@weclouddata.net",
+      "from_address_email": "louise.c@weclouddata.net",
+      "campaign_id": "70d984e7-c658-47ec-8623-6d548372d796",
+      "lead": "marcjacobs@ntop.com",
+      "ue_type": 1,
+      "step": "0_2_0",
+      "is_unread": 0,
+      "is_focused": 1,
+      "thread_id": "70-jIPcTcngspjXZE-kcH_nTZm"
+    }
+  },
+  {
+    "endpoint": "/api/v2/emails/unread/count",
+    "total_entries": 1,
+    "all_columns": [
+      "count"
+    ],
+    "nested_structures": {},
+    "sample_data": {
+      "count": 49
+    }
+  },
+  {
+    "endpoint": "/api/v2/lead-lists",
+    "total_entries": 10,
+    "all_columns": [
+      "id",
+      "name",
+      "organization_id",
+      "owned_by",
+      "timestamp_created"
+    ],
+    "nested_structures": {},
+    "sample_data": {
+      "id": "634e48c7-9b89-4c32-b513-bbe2770bd503",
+      "organization_id": "f44277de-69b2-4bc3-a69c-28afd4094123",
+      "name": "Test list V2",
+      "timestamp_created": "2025-04-02T18:24:03.088Z"
+    }
+  },
+  {
+    "endpoint": "/api/v2/inbox-placement-tests",
+    "total_entries": 1,
+    "all_columns": [
+      "items"
+    ],
+    "nested_structures": {},
+    "sample_data": {
+      "items": []
+    }
+  },
+  {
+    "endpoint": "/api/v2/api-keys",
+    "total_entries": 3,
+    "all_columns": [
+      "id",
+      "key",
+      "name",
+      "organization_id",
+      "scopes",
+      "timestamp_created",
+      "timestamp_updated"
+    ],
+    "nested_structures": {},
+    "sample_data": {
+      "id": "a9f94b95-f8ee-49d0-8f60-033e0995891e",
+      "name": "consultants_only_read",
+      "scopes": [
+        "all:read"
+      ],
+      "key": "",
+      "organization_id": "f44277de-69b2-4bc3-a69c-28afd4094123",
+      "timestamp_created": "2025-08-07T18:53:45.295Z",
+      "timestamp_updated": "2025-08-07T18:53:45.295Z"
+    }
+  },
+  {
+    "endpoint": "/api/v2/background-jobs",
+    "total_entries": 100,
+    "all_columns": [
+      "created_at",
+      "data",
+      "entity_type",
+      "id",
+      "progress",
+      "status",
+      "type",
+      "updated_at",
+      "workspace_id"
+    ],
+    "nested_structures": {
+      "data": [
+        "duplicated_leads",
+        "error_message",
+        "filters",
+        "ignored_leads",
+        "leads_in_other_campaigns",
+        "leads_missing_email",
+        "moved_leads",
+        "total_leads"
+      ]
+    },
+    "sample_data": {
+      "id": "688a1a3fbf7f37665e4f67ef",
+      "workspace_id": "f44277de-69b2-4bc3-a69c-28afd4094123",
+      "type": "move-leads",
+      "progress": 100,
+      "status": "failed",
+      "created_at": "2025-07-30T13:12:31.846Z",
+      "updated_at": "2025-07-30T13:12:31.879Z",
+      "entity_type": "campaign",
+      "data": {
+        "filters": {
+          "ids": [
+            "648efa9f-9a69-420e-8ccb-2022f8ed5431",
+            "25d68bd7-3888-45b1-98cb-30646c670c44",
+            "a42264be-0f92-4b6f-a22b-404485e530f6",
+            "790b8c8b-711a-46e1-80c5-812364d069d0",
+            "85bd4f19-fe62-4e58-8948-3f817979a74e",
+            "4c8fb988-a36f-41be-974b-ca7ed1c2a5da",
+            "9ec508ad-4d16-459d-94b7-8822e8a2053c",
+            "abf0d4f0-ab2b-4674-9620-87b9f4b861a1",
+            "ae6ea73f-c140-405c-b47f-718d64622476",
+            "0365076a-5694-4c58-b242-164d8e4c88ed"
+          ],
+          "to_campaign_id": "34bc0978-c86a-4012-9458-5b35b0a3dfd0"
+        },
+        "error_message": "Source campaign or list not found"
+      }
+    }
+  },
+  {
+    "endpoint": "/api/v2/custom-tags",
+    "total_entries": 1,
+    "all_columns": [
+      "description",
+      "id",
+      "label",
+      "organization_id",
+      "timestamp_created",
+      "timestamp_updated"
+    ],
+    "nested_structures": {},
+    "sample_data": {
+      "id": "290e9a3c-55fb-4d92-9e6b-5b532a2f219e",
+      "timestamp_created": "2025-03-12T17:46:33.196Z",
+      "timestamp_updated": "2025-03-12T17:46:33.196Z",
+      "organization_id": "f44277de-69b2-4bc3-a69c-28afd4094123",
+      "label": "Custom Tag",
+      "description": "GenAI workshop promotion "
+    }
+  },
+  {
+    "endpoint": "/api/v2/block-lists-entries",
+    "total_entries": 7,
+    "all_columns": [
+      "bl_value",
+      "id",
+      "is_domain",
+      "organization_id",
+      "timestamp_created"
+    ],
+    "nested_structures": {},
+    "sample_data": {
+      "id": "d75292f5-6921-4207-afe3-eb6341d2d883",
+      "timestamp_created": "2025-02-11T20:37:10.111Z",
+      "organization_id": "f44277de-69b2-4bc3-a69c-28afd4094123",
+      "bl_value": "prudenteng.com",
+      "is_domain": true
+    }
+  },
+  {
+    "endpoint": "/api/v2/lead-labels",
+    "total_entries": 1,
+    "all_columns": [
+      "items"
+    ],
+    "nested_structures": {},
+    "sample_data": {
+      "items": []
+    }
+  },
+  {
+    "endpoint": "/api/v2/workspaces/current",
+    "total_entries": 1,
+    "all_columns": [
+      "id",
+      "name",
+      "owner",
+      "plan_id",
+      "plan_id_leadfinder",
+      "timestamp_created",
+      "timestamp_updated"
+    ],
+    "nested_structures": {},
+    "sample_data": {
+      "id": "f44277de-69b2-4bc3-a69c-28afd4094123",
+      "timestamp_created": "2024-11-15T22:05:17.897Z",
+      "timestamp_updated": "2024-11-18T18:50:32.453Z",
+      "owner": "95e34077-5b10-4ff2-ada7-a9659a12e637",
+      "name": "My Organization",
+      "plan_id": "pid_hg_v1",
+      "plan_id_leadfinder": "pid_free"
+    }
+  },
+  {
+    "endpoint": "/api/v2/workspace-group-members",
+    "total_entries": 1,
+    "all_columns": [
+      "items"
+    ],
+    "nested_structures": {},
+    "sample_data": {
+      "items": []
+    }
+  },
+  {
+    "endpoint": "/api/v2/workspace-group-members/admin",
+    "total_entries": 1,
+    "all_columns": [
+      "has_admin_workspace",
+      "workspace_name"
+    ],
+    "nested_structures": {},
+    "sample_data": {
+      "workspace_name": "Undefined",
+      "has_admin_workspace": false
+    }
+  },
+  {
+    "endpoint": "/api/v2/workspace-members",
+    "total_entries": 1,
+    "all_columns": [
+      "items"
+    ],
+    "nested_structures": {},
+    "sample_data": {
+      "items": []
+    }
+  },
+  {
+    "endpoint": "/api/v2/audit-logs",
+    "total_entries": 10,
+    "all_columns": [
+      "activity_type",
+      "campaign_id",
+      "from_api",
+      "id",
+      "ip_address",
+      "organization_id",
+      "timestamp",
+      "user_agent",
+      "user_id",
+      "user_name"
+    ],
+    "nested_structures": {},
+    "sample_data": {
+      "id": "6894f5bf95b0f275459a7952",
+      "timestamp": "2025-08-07T18:51:43.830Z",
+      "organization_id": "f44277de-69b2-4bc3-a69c-28afd4094123",
+      "activity_type": 1,
+      "ip_address": "99.240.22.215",
+      "from_api": false,
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+      "user_id": "95e34077-5b10-4ff2-ada7-a9659a12e637",
+      "user_name": "Shaohua Zhang"
+    }
+  }
+]

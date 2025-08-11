@@ -617,45 +617,47 @@ def create_advanced_engagement_features(df):
 
 def encode_categorical_features(df, max_categories=100):
     """
-    Encode categorical features using frequency encoding for high cardinality
-    and Label Encoding for low cardinality features.
+    Encode categorical features with frequency encoding for high cardinality
+    and Label Encoding for low cardinality, handling unhashable types.
     """
     print("🔧 Encoding categorical features...")
     
-    # Create a copy to avoid modifying original
     df_encoded = df.copy()
-    label_encoders = {}
     
     # Get categorical columns
     categorical_cols = df_encoded.select_dtypes(include=['object', 'category']).columns.tolist()
     
     for col in categorical_cols:
         if col in df_encoded.columns:
-            # Handle NaN values properly for categorical data
-            if df_encoded[col].dtype == 'category':
-                # For categorical data, add 'Unknown' to categories first
-                df_encoded[col] = df_encoded[col].cat.add_categories(['Unknown'])
-                df_encoded[col] = df_encoded[col].fillna('Unknown')
-            else:
-                # For object data, fill NaN with 'Unknown'
-                df_encoded[col] = df_encoded[col].fillna('Unknown')
-            
-            unique_count = df_encoded[col].nunique()
-            
-            if unique_count > max_categories:
-                # Frequency encoding for high cardinality
-                freq_encoding = df_encoded[col].value_counts(normalize=True)
-                df_encoded[f'{col}_frequency'] = df_encoded[col].map(freq_encoding)
-                df_encoded[f'{col}_frequency_norm'] = (df_encoded[col].map(freq_encoding) - freq_encoding.min()) / (freq_encoding.max() - freq_encoding.min())
-                print(f"  Frequency encoded {col} ({unique_count} unique values)")
-            else:
-                # Label encoding for low cardinality
-                le = LabelEncoder()
-                df_encoded[col] = le.fit_transform(df_encoded[col])
-                label_encoders[col] = le
-                print(f"  Label encoded {col} ({unique_count} unique values)")
+            # Skip columns that might contain unhashable types (like lists from JSONB)
+            try:
+                # Check if column contains unhashable types
+                sample_values = df_encoded[col].dropna().head(100)
+                if any(isinstance(val, (list, dict, set)) for val in sample_values):
+                    print(f"⚠️ Skipping {col} - contains unhashable types (likely JSONB data)")
+                    continue
+                
+                # Get unique values
+                unique_values = df_encoded[col].dropna().unique()
+                
+                if len(unique_values) <= max_categories:
+                    # Use Label Encoding for low cardinality
+                    from sklearn.preprocessing import LabelEncoder
+                    le = LabelEncoder()
+                    df_encoded[f'{col}_encoded'] = le.fit_transform(df_encoded[col].fillna('Unknown'))
+                    print(f"  ✅ Label encoded {col} ({len(unique_values)} categories)")
+                else:
+                    # Use Frequency Encoding for high cardinality
+                    freq_encoding = df_encoded[col].value_counts(normalize=True)
+                    df_encoded[f'{col}_freq_encoded'] = df_encoded[col].map(freq_encoding).fillna(0)
+                    print(f"  ✅ Frequency encoded {col} ({len(unique_values)} categories)")
+                    
+            except (TypeError, ValueError) as e:
+                print(f"⚠️ Skipping {col} - encoding failed: {e}")
+                continue
     
-    return df_encoded, label_encoders
+    print(f"✅ Categorical encoding complete. Shape: {df_encoded.shape}")
+    return df_encoded
 
 def prepare_features_for_model(df, target_variable='opened', cols_to_drop=None):
     """
@@ -717,3 +719,256 @@ def apply_enhanced_feature_engineering(df):
     
     print(f"✅ Enhanced feature engineering complete. Shape: {df.shape}")
     return df 
+
+def create_comprehensive_jsonb_features(df):
+    """
+    Create comprehensive JSONB features based on actual database structure analysis.
+    """
+    print("🔧 Creating comprehensive JSONB features...")
+    
+    df_jsonb = df.copy()
+    
+    # 1. EMPLOYMENT_HISTORY ANALYSIS (Array of job objects)
+    if 'employment_history' in df_jsonb.columns:
+        print("  📊 Processing employment_history...")
+        
+        # Basic presence and complexity
+        df_jsonb['has_employment_history'] = df_jsonb['employment_history'].notna().astype(int)
+        df_jsonb['employment_history_length'] = df_jsonb['employment_history'].astype(str).str.len()
+        
+        # Employment history features
+        def extract_employment_features(json_str):
+            try:
+                if pd.notna(json_str) and json_str != 'null':
+                    jobs = json.loads(json_str)
+                    if isinstance(jobs, list) and jobs:
+                        # Job count
+                        job_count = len(jobs)
+                        
+                        # Current job analysis
+                        current_jobs = [job for job in jobs if job.get('current', False)]
+                        current_job_count = len(current_jobs)
+                        
+                        # Title analysis
+                        titles = [job.get('title', '') for job in jobs if job.get('title')]
+                        senior_titles = ['ceo', 'cto', 'cfo', 'coo', 'vp', 'director', 'head', 'chief', 'president', 'founder']
+                        senior_count = sum(1 for title in titles if any(senior in title.lower() for senior in senior_titles))
+                        
+                        # Duration analysis
+                        durations = []
+                        for job in jobs:
+                            start_date = job.get('start_date')
+                            end_date = job.get('end_date')
+                            if start_date and end_date:
+                                try:
+                                    start = pd.to_datetime(start_date)
+                                    end = pd.to_datetime(end_date)
+                                    duration = (end - start).days
+                                    durations.append(duration)
+                                except:
+                                    continue
+                        
+                        avg_duration = np.mean(durations) if durations else 0
+                        max_duration = max(durations) if durations else 0
+                        
+                        return {
+                            'job_count': job_count,
+                            'current_job_count': current_job_count,
+                            'senior_title_count': senior_count,
+                            'avg_job_duration': avg_duration,
+                            'max_job_duration': max_duration,
+                            'total_experience_years': sum(durations) / 365 if durations else 0
+                        }
+                return {
+                    'job_count': 0, 'current_job_count': 0, 'senior_title_count': 0,
+                    'avg_job_duration': 0, 'max_job_duration': 0, 'total_experience_years': 0
+                }
+            except:
+                return {
+                    'job_count': 0, 'current_job_count': 0, 'senior_title_count': 0,
+                    'avg_job_duration': 0, 'max_job_duration': 0, 'total_experience_years': 0
+                }
+        
+        # Apply employment feature extraction
+        employment_features = df_jsonb['employment_history'].apply(extract_employment_features)
+        for key in ['job_count', 'current_job_count', 'senior_title_count', 'avg_job_duration', 'max_job_duration', 'total_experience_years']:
+            df_jsonb[f'employment_{key}'] = employment_features.apply(lambda x: x.get(key, 0))
+    
+    # 2. ORGANIZATION_DATA ANALYSIS (Company information object)
+    if 'organization_data' in df_jsonb.columns:
+        print("  📊 Processing organization_data...")
+        
+        # Basic presence and complexity
+        df_jsonb['has_organization_data'] = df_jsonb['organization_data'].notna().astype(int)
+        df_jsonb['organization_data_length'] = df_jsonb['organization_data'].astype(str).str.len()
+        
+        # Organization features
+        def extract_organization_features(json_str):
+            try:
+                if pd.notna(json_str) and json_str != 'null':
+                    org = json.loads(json_str)
+                    if isinstance(org, dict):
+                        return {
+                            'org_has_industry': 1 if org.get('industry') else 0,
+                            'org_has_keywords': 1 if org.get('keywords') else 0,
+                            'org_has_linkedin': 1 if org.get('linkedin_url') else 0,
+                            'org_has_phone': 1 if org.get('phone') else 0,
+                            'org_has_alexa_ranking': 1 if org.get('alexa_ranking') else 0,
+                            'org_is_publicly_traded': 1 if org.get('publicly_traded_exchange') else 0,
+                            'org_has_retail_locations': 1 if org.get('retail_location_count') else 0,
+                            'org_has_secondary_industries': 1 if org.get('secondary_industries') else 0,
+                            'org_keyword_count': len(org.get('keywords', [])),
+                            'org_secondary_industry_count': len(org.get('secondary_industries', []))
+                        }
+                return {
+                    'org_has_industry': 0, 'org_has_keywords': 0, 'org_has_linkedin': 0,
+                    'org_has_phone': 0, 'org_has_alexa_ranking': 0, 'org_is_publicly_traded': 0,
+                    'org_has_retail_locations': 0, 'org_has_secondary_industries': 0,
+                    'org_keyword_count': 0, 'org_secondary_industry_count': 0
+                }
+            except:
+                return {
+                    'org_has_industry': 0, 'org_has_keywords': 0, 'org_has_linkedin': 0,
+                    'org_has_phone': 0, 'org_has_alexa_ranking': 0, 'org_is_publicly_traded': 0,
+                    'org_has_retail_locations': 0, 'org_has_secondary_industries': 0,
+                    'org_keyword_count': 0, 'org_secondary_industry_count': 0
+                }
+        
+        # Apply organization feature extraction
+        org_features = df_jsonb['organization_data'].apply(extract_organization_features)
+        for key in ['org_has_industry', 'org_has_keywords', 'org_has_linkedin', 'org_has_phone', 
+                   'org_has_alexa_ranking', 'org_is_publicly_traded', 'org_has_retail_locations',
+                   'org_has_secondary_industries', 'org_keyword_count', 'org_secondary_industry_count']:
+            df_jsonb[key] = org_features.apply(lambda x: x.get(key, 0))
+    
+    # 3. ACCOUNT_DATA ANALYSIS (Account information object)
+    if 'account_data' in df_jsonb.columns:
+        print("  📊 Processing account_data...")
+        
+        # Basic presence and complexity
+        df_jsonb['has_account_data'] = df_jsonb['account_data'].notna().astype(int)
+        df_jsonb['account_data_length'] = df_jsonb['account_data'].astype(str).str.len()
+        
+        # Account features
+        def extract_account_features(json_str):
+            try:
+                if pd.notna(json_str) and json_str != 'null':
+                    account = json.loads(json_str)
+                    if isinstance(account, dict):
+                        return {
+                            'account_has_domain': 1 if account.get('domain') else 0,
+                            'account_has_source': 1 if account.get('source') else 0,
+                            'account_has_team_id': 1 if account.get('team_id') else 0,
+                            'account_has_owner_id': 1 if account.get('owner_id') else 0,
+                            'account_has_linkedin': 1 if account.get('linkedin_url') else 0,
+                            'account_has_alexa_ranking': 1 if account.get('alexa_ranking') else 0,
+                            'account_is_publicly_traded': 1 if account.get('publicly_traded_exchange') else 0,
+                            'account_has_custom_fields': 1 if account.get('typed_custom_fields') else 0,
+                            'account_existence_level': account.get('existence_level', 0),
+                            'account_custom_field_count': len(account.get('typed_custom_fields', {}))
+                        }
+                return {
+                    'account_has_domain': 0, 'account_has_source': 0, 'account_has_team_id': 0,
+                    'account_has_owner_id': 0, 'account_has_linkedin': 0, 'account_has_alexa_ranking': 0,
+                    'account_is_publicly_traded': 0, 'account_has_custom_fields': 0,
+                    'account_existence_level': 0, 'account_custom_field_count': 0
+                }
+            except:
+                return {
+                    'account_has_domain': 0, 'account_has_source': 0, 'account_has_team_id': 0,
+                    'account_has_owner_id': 0, 'account_has_linkedin': 0, 'account_has_alexa_ranking': 0,
+                    'account_is_publicly_traded': 0, 'account_has_custom_fields': 0,
+                    'account_existence_level': 0, 'account_custom_field_count': 0
+                }
+        
+        # Apply account feature extraction
+        account_features = df_jsonb['account_data'].apply(extract_account_features)
+        for key in ['account_has_domain', 'account_has_source', 'account_has_team_id', 'account_has_owner_id',
+                   'account_has_linkedin', 'account_has_alexa_ranking', 'account_is_publicly_traded',
+                   'account_has_custom_fields', 'account_existence_level', 'account_custom_field_count']:
+            df_jsonb[key] = account_features.apply(lambda x: x.get(key, 0))
+    
+    # 4. API_RESPONSE_RAW ANALYSIS (Contact enrichment data object)
+    if 'api_response_raw' in df_jsonb.columns:
+        print("  📊 Processing api_response_raw...")
+        
+        # Basic presence and complexity
+        df_jsonb['has_api_response'] = df_jsonb['api_response_raw'].notna().astype(int)
+        df_jsonb['api_response_length'] = df_jsonb['api_response_raw'].astype(str).str.len()
+        
+        # API response features
+        def extract_api_features(json_str):
+            try:
+                if pd.notna(json_str) and json_str != 'null':
+                    api_data = json.loads(json_str)
+                    if isinstance(api_data, dict):
+                        # Contact features
+                        contact_features = {
+                            'api_has_photo': 1 if api_data.get('photo_url') else 0,
+                            'api_has_linkedin': 1 if api_data.get('linkedin_url') else 0,
+                            'api_has_email': 1 if api_data.get('email') else 0,
+                            'api_has_functions': 1 if api_data.get('functions') else 0,
+                            'api_has_departments': 1 if api_data.get('departments') else 0,
+                            'api_has_account': 1 if api_data.get('account') else 0,
+                            'api_email_status': 1 if api_data.get('email_status') == 'valid' else 0,
+                            'api_function_count': len(api_data.get('functions', [])),
+                            'api_department_count': len(api_data.get('departments', []))
+                        }
+                        
+                        # Account features from API response
+                        account = api_data.get('account', {})
+                        if isinstance(account, dict):
+                            contact_features.update({
+                                'api_account_has_id': 1 if account.get('id') else 0,
+                                'api_account_has_name': 1 if account.get('name') else 0,
+                                'api_account_has_domain': 1 if account.get('domain') else 0,
+                                'api_account_has_industry': 1 if account.get('industry') else 0
+                            })
+                        
+                        return contact_features
+                return {
+                    'api_has_photo': 0, 'api_has_linkedin': 0, 'api_has_email': 0,
+                    'api_has_functions': 0, 'api_has_departments': 0, 'api_has_account': 0,
+                    'api_email_status': 0, 'api_function_count': 0, 'api_department_count': 0,
+                    'api_account_has_id': 0, 'api_account_has_name': 0, 'api_account_has_domain': 0,
+                    'api_account_has_industry': 0
+                }
+            except:
+                return {
+                    'api_has_photo': 0, 'api_has_linkedin': 0, 'api_has_email': 0,
+                    'api_has_functions': 0, 'api_has_departments': 0, 'api_has_account': 0,
+                    'api_email_status': 0, 'api_function_count': 0, 'api_department_count': 0,
+                    'api_account_has_id': 0, 'api_account_has_name': 0, 'api_account_has_domain': 0,
+                    'api_account_has_industry': 0
+                }
+        
+        # Apply API feature extraction
+        api_features = df_jsonb['api_response_raw'].apply(extract_api_features)
+        for key in ['api_has_photo', 'api_has_linkedin', 'api_has_email', 'api_has_functions',
+                   'api_has_departments', 'api_has_account', 'api_email_status', 'api_function_count',
+                   'api_department_count', 'api_account_has_id', 'api_account_has_name',
+                   'api_account_has_domain', 'api_account_has_industry']:
+            df_jsonb[key] = api_features.apply(lambda x: x.get(key, 0))
+    
+    # 5. COMPREHENSIVE ENRICHMENT SCORES
+    print("  📊 Creating comprehensive enrichment scores...")
+    
+    # Data completeness scores
+    jsonb_cols = ['employment_history', 'organization_data', 'account_data', 'api_response_raw']
+    presence_cols = [f'has_{col.replace("_", "")}' for col in jsonb_cols]
+    available_presence_cols = [col for col in presence_cols if col in df_jsonb.columns]
+    
+    if available_presence_cols:
+        df_jsonb['jsonb_completeness_score'] = df_jsonb[available_presence_cols].sum(axis=1)
+        df_jsonb['jsonb_completeness_pct'] = df_jsonb['jsonb_completeness_score'] / len(available_presence_cols)
+    
+    # Data richness scores
+    length_cols = [f'{col.replace("_", "")}_length' for col in jsonb_cols]
+    available_length_cols = [col for col in length_cols if col in df_jsonb.columns]
+    
+    if available_length_cols:
+        df_jsonb['jsonb_richness_score'] = df_jsonb[available_length_cols].sum(axis=1)
+        df_jsonb['jsonb_richness_normalized'] = (df_jsonb['jsonb_richness_score'] - df_jsonb['jsonb_richness_score'].min()) / (df_jsonb['jsonb_richness_score'].max() - df_jsonb['jsonb_richness_score'].min())
+    
+    print(f"✅ Comprehensive JSONB features created. Shape: {df_jsonb.shape}")
+    return df_jsonb 

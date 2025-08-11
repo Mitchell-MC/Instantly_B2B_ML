@@ -340,27 +340,42 @@ def create_advanced_engagement_features(df):
     return df
 
 def encode_categorical_features(df, max_categories=100):
-    """Encode categorical features with frequency-based encoding."""
+    """Encode categorical features with frequency-based encoding, handling unhashable types."""
     print("🔧 Encoding categorical features...")
     
     categorical_cols = df.select_dtypes(include=['object', 'category']).columns
     
     for col in categorical_cols:
         if col in df.columns:
-            # Get value counts
-            value_counts = df[col].value_counts()
-            
-            # If too many categories, keep only the most frequent ones
-            if len(value_counts) > max_categories:
-                top_categories = value_counts.head(max_categories).index
-                df[col] = df[col].apply(lambda x: x if x in top_categories else 'Other')
-            
-            # Frequency encoding
-            freq_encoding = df[col].value_counts(normalize=True)
-            df[f'{col}_freq_encoded'] = df[col].map(freq_encoding)
-            
-            # Label encoding
-            df[f'{col}_label_encoded'] = LabelEncoder().fit_transform(df[col].fillna('Unknown'))
+            try:
+                # Check if column contains unhashable types (like lists from JSONB)
+                sample_values = df[col].dropna().head(100)
+                if any(isinstance(val, (list, dict, set)) for val in sample_values):
+                    print(f"⚠️ Skipping {col} - contains unhashable types (likely JSONB data)")
+                    continue
+                
+                # Get value counts
+                value_counts = df[col].value_counts()
+                
+                # If too many categories, keep only the most frequent ones
+                if len(value_counts) > max_categories:
+                    top_categories = value_counts.head(max_categories).index
+                    df[col] = df[col].apply(lambda x: x if x in top_categories else 'Other')
+                
+                # Frequency encoding
+                freq_encoding = df[col].value_counts(normalize=True)
+                df[f'{col}_freq_encoded'] = df[col].map(freq_encoding).fillna(0)
+                
+                # Label encoding
+                from sklearn.preprocessing import LabelEncoder
+                le = LabelEncoder()
+                df[f'{col}_label_encoded'] = le.fit_transform(df[col].fillna('Unknown'))
+                
+                print(f"  ✅ Encoded {col} ({len(value_counts)} categories)")
+                
+            except (TypeError, ValueError) as e:
+                print(f"⚠️ Skipping {col} - encoding failed: {e}")
+                continue
     
     print("Categorical features encoded successfully")
     return df

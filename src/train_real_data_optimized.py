@@ -26,12 +26,12 @@ import seaborn as sns
 import warnings
 warnings.filterwarnings('ignore')
 
-from feature_engineering import (
+from src.feature_engineering import (
     enhanced_text_preprocessing, advanced_timestamp_features, 
     create_interaction_features, create_jsonb_features, handle_outliers,
     create_xgboost_optimized_features, encode_categorical_features, 
     prepare_features_for_model, create_comprehensive_organization_data,
-    create_advanced_engagement_features # Added this import
+    create_advanced_engagement_features, create_comprehensive_jsonb_features # Added comprehensive JSONB
 )
 
 def load_config():
@@ -825,11 +825,12 @@ def main():
     df = enhanced_text_preprocessing(df)
     df = advanced_timestamp_features(df)
     df = create_interaction_features(df)
-    df = create_jsonb_features(df)
+    df = create_comprehensive_jsonb_features(df)  # NEW: Comprehensive JSONB features
     df = create_comprehensive_organization_data(df)
     df = create_advanced_engagement_features(df)  # NEW: Advanced engagement features
     df = create_xgboost_optimized_features(df)
     df = handle_outliers(df)
+    df = encode_categorical_features(df)  # Updated: now returns only dataframe
     
     print(f"✅ Feature engineering complete. Shape: {df.shape}")
     print(f"📈 Feature increase: {df.shape[1] - original_shape[1]} new features")

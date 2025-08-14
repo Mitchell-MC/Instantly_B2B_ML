@@ -1,0 +1,49 @@
+{
+  "timestamp": "2025-08-12T11:18:20.621747",
+  "system_status": {
+    "monitoring_active": false,
+    "last_monitoring_run": null,
+    "monitoring_interval": 3600
+  },
+  "current_metrics": {
+    "timestamp": "2025-08-12T11:18:20.620230",
+    "system_health": {
+      "overall_score": 1.0,
+      "issues": [],
+      "status": "healthy"
+    },
+    "model_performance": {
+      "accuracy": 0.78,
+      "auc": 0.83,
+      "f1_score": 0.76,
+      "prediction_count": 0,
+      "last_updated": "2025-08-12T11:18:20.620449"
+    },
+    "data_drift": {
+      "overall_assessment": "no_drift",
+      "last_check": "2025-08-12T11:18:20.620456",
+      "features_checked": 0,
+      "drift_detected": false
+    },
+    "deployment_status": {
+      "champion_loaded": true,
+      "challenger_status": null,
+      "deployment_history": [],
+      "rollback_history": [],
+      "total_deployments": 0,
+      "total_rollbacks": 0
+    },
+    "retraining_status": {
+      "last_retraining_date": null,
+      "total_retrainings": 0,
+      "retraining_history": [],
+      "next_recommended_retraining": "2025-08-12T11:18:20.620473"
+    }
+  },
+  "summary": {
+    "total_alerts": 0,
+    "critical_alerts": 0,
+    "warning_alerts": 0,
+    "performance_records": 3
+  }
+}

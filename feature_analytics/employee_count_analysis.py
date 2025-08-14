@@ -320,9 +320,10 @@ def analyze_employee_count():
     
     # Plot 8: Click Rate vs Employee Count
     ax = axes[2, 1]
-    click_rates_by_size = df.groupby('company_size_category').apply(
-        lambda x: (x['email_click_count'] > 0).mean()
-    )
+    # Vectorized: mean of boolean indicates rate
+    click_rates_by_size = (df.assign(clicked=(df['email_click_count'] > 0).astype(float))
+                             .groupby('company_size_category')['clicked']
+                             .mean())
     if not click_rates_by_size.empty:
         click_rates_by_size.plot(kind='bar', ax=ax, color='purple')
         ax.set_title('Click Rate by Company Size')

@@ -216,27 +216,33 @@ def create_jsonb_features(df):
             # Extract basic JSON features
             df[f'{col}_has_data'] = df[col].notna().astype(int)
             df[f'{col}_length'] = df[col].astype(str).str.len()
-            
-            # Try to parse JSON and extract specific fields
+
+            # Parse once per row
+            def _safe_parse(obj):
+                try:
+                    if pd.notna(obj) and obj != 'null':
+                        return json.loads(obj) if isinstance(obj, str) else obj
+                except Exception:
+                    return None
+                return None
+
+            parsed = df[col].apply(_safe_parse)
+
             try:
-                # For organization_data, extract common fields
                 if col == 'organization_data':
-                    df[f'{col}_employee_count'] = df[col].apply(
-                        lambda x: extract_json_field(x, 'employee_count') if pd.notna(x) else None
+                    df[f'{col}_employee_count'] = parsed.apply(
+                        lambda d: d.get('employee_count') if isinstance(d, dict) else None
                     )
-                    df[f'{col}_founded_year'] = df[col].apply(
-                        lambda x: extract_json_field(x, 'founded_year') if pd.notna(x) else None
+                    df[f'{col}_founded_year'] = parsed.apply(
+                        lambda d: d.get('founded_year') if isinstance(d, dict) else None
                     )
-                    df[f'{col}_industry'] = df[col].apply(
-                        lambda x: extract_json_field(x, 'industry') if pd.notna(x) else None
+                    df[f'{col}_industry'] = parsed.apply(
+                        lambda d: d.get('industry') if isinstance(d, dict) else None
                     )
-                
-                # For employment_history, extract duration features
                 elif col == 'employment_history':
-                    df[f'{col}_entries_count'] = df[col].apply(
-                        lambda x: len(json.loads(x)) if pd.notna(x) and x != 'null' else 0
+                    df[f'{col}_entries_count'] = parsed.apply(
+                        lambda lst: len(lst) if isinstance(lst, list) else 0
                     )
-                    
             except Exception as e:
                 print(f"Warning: Could not parse JSONB column {col}: {e}")
     

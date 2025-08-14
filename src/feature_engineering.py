@@ -494,25 +494,24 @@ def create_comprehensive_organization_data(df):
             df_org['has_org_json_data'] = df_org['organization_data'].notna().astype(int)
             df_org['org_json_length'] = df_org['organization_data'].astype(str).str.len()
             
-            # Try to extract specific fields from JSON
-            def extract_org_json_field(json_str, field_name):
+            # Parse once per row, then derive fields to avoid repeated json.loads
+            def _safe_parse(obj):
                 try:
-                    if pd.notna(json_str) and json_str != 'null':
-                        data = json.loads(json_str)
-                        return data.get(field_name, '')
-                    return ''
-                except:
-                    return ''
-            
-            # Extract common organization fields from JSON
-            df_org['org_json_has_website'] = df_org['organization_data'].apply(
-                lambda x: 1 if extract_org_json_field(x, 'website') else 0
+                    if pd.notna(obj) and obj != 'null':
+                        return json.loads(obj) if isinstance(obj, str) else obj
+                except Exception:
+                    return {}
+                return {}
+
+            _parsed = df_org['organization_data'].apply(_safe_parse)
+            df_org['org_json_has_website'] = _parsed.apply(
+                lambda d: 1 if isinstance(d, dict) and d.get('website') else 0
             )
-            df_org['org_json_has_phone'] = df_org['organization_data'].apply(
-                lambda x: 1 if extract_org_json_field(x, 'phone') else 0
+            df_org['org_json_has_phone'] = _parsed.apply(
+                lambda d: 1 if isinstance(d, dict) and d.get('phone') else 0
             )
-            df_org['org_json_has_address'] = df_org['organization_data'].apply(
-                lambda x: 1 if extract_org_json_field(x, 'address') else 0
+            df_org['org_json_has_address'] = _parsed.apply(
+                lambda d: 1 if isinstance(d, dict) and d.get('address') else 0
             )
             
         except Exception as e:
@@ -642,7 +641,6 @@ def encode_categorical_features(df, max_categories=100):
                 
                 if len(unique_values) <= max_categories:
                     # Use Label Encoding for low cardinality
-                    from sklearn.preprocessing import LabelEncoder
                     le = LabelEncoder()
                     df_encoded[f'{col}_encoded'] = le.fit_transform(df_encoded[col].fillna('Unknown'))
                     print(f"  ✅ Label encoded {col} ({len(unique_values)} categories)")
@@ -789,10 +787,12 @@ def create_comprehensive_jsonb_features(df):
                     'avg_job_duration': 0, 'max_job_duration': 0, 'total_experience_years': 0
                 }
         
-        # Apply employment feature extraction
+        # Apply employment feature extraction once, then expand efficiently
         employment_features = df_jsonb['employment_history'].apply(extract_employment_features)
+        employment_df = pd.DataFrame(list(employment_features))
         for key in ['job_count', 'current_job_count', 'senior_title_count', 'avg_job_duration', 'max_job_duration', 'total_experience_years']:
-            df_jsonb[f'employment_{key}'] = employment_features.apply(lambda x: x.get(key, 0))
+            if key in employment_df.columns:
+                df_jsonb[f'employment_{key}'] = employment_df[key].fillna(0)
     
     # 2. ORGANIZATION_DATA ANALYSIS (Company information object)
     if 'organization_data' in df_jsonb.columns:
@@ -834,12 +834,14 @@ def create_comprehensive_jsonb_features(df):
                     'org_keyword_count': 0, 'org_secondary_industry_count': 0
                 }
         
-        # Apply organization feature extraction
+        # Apply organization feature extraction once, then expand efficiently
         org_features = df_jsonb['organization_data'].apply(extract_organization_features)
+        org_df = pd.DataFrame(list(org_features))
         for key in ['org_has_industry', 'org_has_keywords', 'org_has_linkedin', 'org_has_phone', 
                    'org_has_alexa_ranking', 'org_is_publicly_traded', 'org_has_retail_locations',
                    'org_has_secondary_industries', 'org_keyword_count', 'org_secondary_industry_count']:
-            df_jsonb[key] = org_features.apply(lambda x: x.get(key, 0))
+            if key in org_df.columns:
+                df_jsonb[key] = org_df[key].fillna(0)
     
     # 3. ACCOUNT_DATA ANALYSIS (Account information object)
     if 'account_data' in df_jsonb.columns:
@@ -881,12 +883,14 @@ def create_comprehensive_jsonb_features(df):
                     'account_existence_level': 0, 'account_custom_field_count': 0
                 }
         
-        # Apply account feature extraction
+        # Apply account feature extraction once, then expand efficiently
         account_features = df_jsonb['account_data'].apply(extract_account_features)
+        account_df = pd.DataFrame(list(account_features))
         for key in ['account_has_domain', 'account_has_source', 'account_has_team_id', 'account_has_owner_id',
                    'account_has_linkedin', 'account_has_alexa_ranking', 'account_is_publicly_traded',
                    'account_has_custom_fields', 'account_existence_level', 'account_custom_field_count']:
-            df_jsonb[key] = account_features.apply(lambda x: x.get(key, 0))
+            if key in account_df.columns:
+                df_jsonb[key] = account_df[key].fillna(0)
     
     # 4. API_RESPONSE_RAW ANALYSIS (Contact enrichment data object)
     if 'api_response_raw' in df_jsonb.columns:
@@ -942,13 +946,15 @@ def create_comprehensive_jsonb_features(df):
                     'api_account_has_industry': 0
                 }
         
-        # Apply API feature extraction
+        # Apply API feature extraction once, then expand efficiently
         api_features = df_jsonb['api_response_raw'].apply(extract_api_features)
+        api_df = pd.DataFrame(list(api_features))
         for key in ['api_has_photo', 'api_has_linkedin', 'api_has_email', 'api_has_functions',
                    'api_has_departments', 'api_has_account', 'api_email_status', 'api_function_count',
                    'api_department_count', 'api_account_has_id', 'api_account_has_name',
                    'api_account_has_domain', 'api_account_has_industry']:
-            df_jsonb[key] = api_features.apply(lambda x: x.get(key, 0))
+            if key in api_df.columns:
+                df_jsonb[key] = api_df[key].fillna(0)
     
     # 5. COMPREHENSIVE ENRICHMENT SCORES
     print("  📊 Creating comprehensive enrichment scores...")

@@ -68,9 +68,10 @@ def analyze_link_tracking():
             'id': 'count'
         }).round(3)
         daily_clicks.columns = ['total_clicks', 'avg_clicks_per_contact', 'contacts']
-        # Calculate click rate separately
-        daily_click_rate = df.groupby('date').apply(lambda x: (x['email_click_count'] > 0).sum() / len(x))
-        daily_clicks['click_rate'] = daily_click_rate
+        # Calculate click rate vectorized without groupby.apply
+        clickers = (df['email_click_count'] > 0).astype(int)
+        click_rate_series = (clickers.groupby(df['date']).sum() / df.groupby('date')['id'].count()).fillna(0)
+        daily_clicks['click_rate'] = click_rate_series
         
         # Monthly timeline
         monthly_clicks = df.groupby(pd.Grouper(key='timestamp_created_x', freq='M')).agg({
@@ -80,10 +81,12 @@ def analyze_link_tracking():
         monthly_clicks.columns = ['total_clicks', 'avg_clicks_per_contact', 'contacts']
         monthly_clicks = monthly_clicks[monthly_clicks['contacts'] > 0]
         # Calculate monthly click rate as percentage of contacts who clicked
-        monthly_click_rate = df.groupby(pd.Grouper(key='timestamp_created_x', freq='M')).apply(
-            lambda x: (x['email_click_count'] > 0).sum() / len(x) if len(x) > 0 else 0
-        )
-        monthly_clicks['click_rate'] = monthly_click_rate[monthly_clicks.index]
+        counts_per_month = df.groupby(pd.Grouper(key='timestamp_created_x', freq='M'))['id'].count()
+        clickers_per_month = (df['email_click_count'] > 0).groupby(
+            pd.Grouper(key='timestamp_created_x', freq='M')
+        ).sum()
+        monthly_click_rate = (clickers_per_month / counts_per_month.replace(0, np.nan)).fillna(0)
+        monthly_clicks['click_rate'] = monthly_click_rate.reindex(monthly_clicks.index).fillna(0)
         
         print("📅 Monthly Click Timeline:")
         for month, row in monthly_clicks.iterrows():
@@ -305,9 +308,11 @@ def analyze_link_tracking():
         df['weekday_num'] = df['timestamp_created_x'].dt.dayofweek
         
         # Create click rate heatmap data
-        heatmap_data = df.groupby(['month', 'weekday_num']).apply(
-            lambda x: (x['email_click_count'] > 0).mean()
-        ).unstack(fill_value=0)
+        # Vectorized heatmap computation: mean of boolean is equivalent to rate
+        heatmap_data = (df.assign(clicked=(df['email_click_count'] > 0).astype(float))
+                          .groupby(['month', 'weekday_num'])['clicked']
+                          .mean()
+                          .unstack(fill_value=0))
         
         if not heatmap_data.empty:
             sns.heatmap(heatmap_data, ax=ax, cmap='YlOrRd', annot=True, fmt='.2f')

@@ -1,0 +1,210 @@
+[
+  {
+    "pipeline_id": "pipeline_20250812_122514",
+    "start_time": "2025-08-12T12:25:14.337228",
+    "model_path": "models/sample_model.joblib",
+    "environment": "staging",
+    "stages": {
+      "testing": {
+        "status": "passed",
+        "tests_run": 7,
+        "tests_passed": 7,
+        "tests_failed": 0,
+        "coverage": 1.0,
+        "execution_time": 0.018330097198486328,
+        "details": {
+          "unit_tests": {
+            "tests_run": 3,
+            "tests_passed": 3,
+            "tests_failed": 0,
+            "details": [
+              "Model file size OK",
+              "Valid model file format",
+              "Model loaded successfully"
+            ]
+          },
+          "integration_tests": {
+            "tests_run": 2,
+            "tests_passed": 2,
+            "tests_failed": 0,
+            "details": [
+              "Model prediction interface working",
+              "Model predict_proba interface working"
+            ]
+          },
+          "performance_tests": {
+            "tests_run": 2,
+            "tests_passed": 2,
+            "tests_failed": 0,
+            "details": [
+              "Model loading performance OK (0.00s)",
+              "Prediction performance OK (0.001s for 100 samples)"
+            ]
+          }
+        }
+      },
+      "validation": {
+        "status": "passed",
+        "model_performance": {
+          "status": "passed",
+          "score": 0.47304034083026764,
+          "metrics": {
+            "accuracy": 0.47,
+            "precision_macro": 0.47705314009661837,
+            "recall_macro": 0.4764365440264572,
+            "f1_macro": 0.468671679197995,
+            "precision_binary": 0.5652173913043478,
+            "recall_binary": 0.4406779661016949,
+            "f1_binary": 0.49523809523809526,
+            "confusion_matrix": [
+              [
+                21,
+                20
+              ],
+              [
+                33,
+                26
+              ]
+            ],
+            "sample_count": 100,
+            "prediction_variance": 0.24839999999999995
+          }
+        },
+        "data_quality": {
+          "status": "passed",
+          "score": 0.9979999999999999,
+          "metrics": {
+            "completeness": 1.0,
+            "type_consistency": 0.9899999999999999,
+            "range_validity": 1.0,
+            "uniqueness": 1.0,
+            "freshness": 1.0,
+            "anomaly_free": 1.0,
+            "overall_accuracy": 0.9983333333333334
+          }
+        },
+        "drift_detection": {},
+        "overall_score": 0.8
+      },
+      "security": {
+        "status": "failed",
+        "vulnerabilities": [
+          "Model file is world readable",
+          "Model file is world writable"
+        ],
+        "dependencies": [],
+        "secrets": [],
+        "overall_risk": "high"
+      }
+    },
+    "overall_status": "failed",
+    "errors": [
+      "Security scan failed"
+    ],
+    "warnings": []
+  },
+  {
+    "pipeline_id": "pipeline_20250812_122514",
+    "start_time": "2025-08-12T12:25:14.835162",
+    "model_path": "models/sample_model.joblib",
+    "environment": "staging",
+    "stages": {
+      "testing": {
+        "status": "passed",
+        "tests_run": 7,
+        "tests_passed": 7,
+        "tests_failed": 0,
+        "coverage": 1.0,
+        "execution_time": 0.0076944828033447266,
+        "details": {
+          "unit_tests": {
+            "tests_run": 3,
+            "tests_passed": 3,
+            "tests_failed": 0,
+            "details": [
+              "Model file size OK",
+              "Valid model file format",
+              "Model loaded successfully"
+            ]
+          },
+          "integration_tests": {
+            "tests_run": 2,
+            "tests_passed": 2,
+            "tests_failed": 0,
+            "details": [
+              "Model prediction interface working",
+              "Model predict_proba interface working"
+            ]
+          },
+          "performance_tests": {
+            "tests_run": 2,
+            "tests_passed": 2,
+            "tests_failed": 0,
+            "details": [
+              "Model loading performance OK (0.00s)",
+              "Prediction performance OK (0.001s for 100 samples)"
+            ]
+          }
+        }
+      },
+      "validation": {
+        "status": "passed",
+        "model_performance": {
+          "status": "passed",
+          "score": 0.5201040416166467,
+          "metrics": {
+            "accuracy": 0.52,
+            "precision_macro": 0.5202080832332934,
+            "recall_macro": 0.5202080832332934,
+            "f1_macro": 0.52,
+            "precision_binary": 0.5306122448979592,
+            "recall_binary": 0.5098039215686274,
+            "f1_binary": 0.52,
+            "confusion_matrix": [
+              [
+                26,
+                23
+              ],
+              [
+                25,
+                26
+              ]
+            ],
+            "sample_count": 100,
+            "prediction_variance": 0.2499
+          }
+        },
+        "data_quality": {
+          "status": "passed",
+          "score": 0.9979999999999999,
+          "metrics": {
+            "completeness": 1.0,
+            "type_consistency": 0.9899999999999999,
+            "range_validity": 1.0,
+            "uniqueness": 1.0,
+            "freshness": 1.0,
+            "anomaly_free": 1.0,
+            "overall_accuracy": 0.9983333333333334
+          }
+        },
+        "drift_detection": {},
+        "overall_score": 0.8
+      },
+      "security": {
+        "status": "failed",
+        "vulnerabilities": [
+          "Model file is world readable",
+          "Model file is world writable"
+        ],
+        "dependencies": [],
+        "secrets": [],
+        "overall_risk": "high"
+      }
+    },
+    "overall_status": "failed",
+    "errors": [
+      "Security scan failed"
+    ],
+    "warnings": []
+  }
+]

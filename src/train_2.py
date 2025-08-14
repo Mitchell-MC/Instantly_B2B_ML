@@ -33,6 +33,28 @@ from src.feature_engineering import (
     prepare_features_for_model, create_comprehensive_organization_data,
     create_advanced_engagement_features, create_comprehensive_jsonb_features # Added comprehensive JSONB
 )
+from src.ctgan_augmentation import augment_training_data_with_ctgan
+
+
+def save_model_artifacts(model, X_train, y_train, config, metadata=None):
+    """Persist trained model and metadata to the configured artifact path."""
+    try:
+        artifact_path = Path(config['paths']['model_artifact'])
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+
+        payload = {
+            'model': model,
+            'features': list(X_train.columns),
+            'class_labels': np.unique(y_train),
+        }
+        if metadata:
+            payload.update(metadata)
+
+        joblib.dump(payload, artifact_path)
+        print(f"✅ Optimized model saved to: {artifact_path}")
+    except Exception as e:
+        print(f"❌ Failed to save model artifacts: {e}")
+        raise
 
 def load_config():
     """Load configuration from YAML file."""
@@ -351,36 +373,58 @@ def perform_advanced_feature_selection(X, y, config):
     rfe_features = X_uncorr.columns[rfe_selector.support_].tolist()
     print(f"RFE selected: {len(rfe_features)} features")
     
-    # 5. SHAP-based feature selection
+    # 5. SHAP-based feature selection (with sampling for performance)
     print("🔄 Performing SHAP-based feature selection...")
     try:
-        # Train a simple model for SHAP analysis
-        rf_for_shap = RandomForestClassifier(n_estimators=100, random_state=42)
-        rf_for_shap.fit(X_uncorr, y)
-        
-        # Calculate SHAP values
+        shap_cfg = config.get('features', {}).get('shap', {})
+        shap_enabled = shap_cfg.get('enabled', True)
+        if not shap_enabled:
+            raise RuntimeError("SHAP disabled via config")
+
+        max_samples = int(shap_cfg.get('max_samples', 1000))
+        rf_estimators = int(shap_cfg.get('rf_estimators', 100))
+        shap_top_k = int(shap_cfg.get('top_k', 25))
+
+        # Downsample rows to speed up SHAP
+        if len(X_uncorr) > max_samples:
+            rng = np.random.RandomState(42)
+            idx = rng.choice(len(X_uncorr), size=max_samples, replace=False)
+            X_shap = X_uncorr.iloc[idx]
+            y_shap = y.iloc[idx]
+        else:
+            X_shap = X_uncorr
+            y_shap = y
+
+        # Train a small RF model for SHAP analysis
+        rf_for_shap = RandomForestClassifier(n_estimators=rf_estimators, random_state=42, n_jobs=-1)
+        rf_for_shap.fit(X_shap, y_shap)
+
+        # Calculate SHAP values on the sampled set
         explainer = shap.TreeExplainer(rf_for_shap)
-        shap_values = explainer.shap_values(X_uncorr)
-        
-        # Get feature importance from SHAP
-        if len(shap_values) > 1:  # Multi-class
-            shap_importance = np.abs(shap_values).mean(0)
-        else:  # Binary
-            shap_importance = np.abs(shap_values).mean(0)
-        
+        shap_values = explainer.shap_values(X_shap)
+
+        # Aggregate SHAP importance across classes if needed
+        if isinstance(shap_values, list):
+            # Multi-class: average absolute SHAP across classes
+            per_class_importance = [np.abs(v).mean(axis=0) for v in shap_values]
+            shap_importance = np.mean(per_class_importance, axis=0)
+        else:
+            # Binary: single array (n_samples, n_features)
+            shap_importance = np.abs(shap_values).mean(axis=0)
+
         shap_df = pd.DataFrame({
-            'feature': X_uncorr.columns,
+            'feature': X_shap.columns,
             'shap_importance': shap_importance
         }).sort_values('shap_importance', ascending=False)
-        
+
         # Select top SHAP features
-        top_shap_features = shap_df.head(min(25, len(shap_df))).index.tolist()
-        print(f"SHAP selected: {len(top_shap_features)} features")
-        
+        top_shap_features = shap_df.head(min(shap_top_k, len(shap_df)))['feature'].tolist()
+        print(f"SHAP selected: {len(top_shap_features)} features (sampled {len(X_shap)} rows)")
+
     except Exception as e:
-        print(f"⚠️ SHAP analysis failed: {e}")
+        print(f"⚠️ SHAP analysis skipped/fallback: {e}")
         shap_df = mi_df.copy()
-        top_shap_features = mi_df.head(min(25, len(mi_df))).index.tolist()
+        top_shap_features = mi_df.head(min(25, len(mi_df)))['feature'].tolist()
     
     # 6. Model-based feature selection
     print("🔄 Performing model-based feature selection...")
@@ -849,6 +893,13 @@ def main():
     print(f"📊 Data split:")
     print(f"  Training: {X_train.shape}")
     print(f"  Test: {X_test.shape}")
+
+    # Optional CTGAN augmentation on training split only
+    try:
+        X_train, y_train = augment_training_data_with_ctgan(X_train, y_train, config)
+        print(f"🔄 After CTGAN augmentation: X_train={X_train.shape}, y_train={len(y_train)}")
+    except Exception as e:
+        print(f"⚠️ CTGAN augmentation skipped due to error: {e}")
     
     # Apply advanced class balancing
     print("⚖️ Computing balanced class weights...")

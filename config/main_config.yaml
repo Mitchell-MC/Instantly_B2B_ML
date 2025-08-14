@@ -49,6 +49,11 @@ features:
     - 1
     - 2
   target_features: 60
+  shap:
+    enabled: true
+    max_samples: 1000
+    rf_estimators: 100
+    top_k: 25
 logging:
   backup_count: 5
   file: logs/pipeline.log
@@ -83,6 +88,16 @@ monitoring:
   log_predictions: true
   performance_threshold: 0.05
   retrain_threshold: 0.1
+  # Enhanced monitoring settings
+  monitoring_interval: 3600  # 1 hour
+  alert_thresholds:
+    drift_critical: 0.25      # PSI > 0.25 = major drift
+    drift_warning: 0.10       # PSI > 0.10 = minor drift
+    performance_degradation: 0.05  # 5% degradation
+    model_health_score: 0.7   # Minimum health score
+  alert_channels: ['log', 'file']
+  dashboard_refresh_interval: 300  # 5 minutes
+  max_history_days: 30        # Keep 30 days of history
 paths:
   config_dir: config
   confusion_matrix: enhanced_xgboost_confusion_matrix.png
@@ -99,3 +114,133 @@ training:
   target_accuracy: 0.75
   target_auc: 0.82
   verbose: 1
+augmentation:
+  ctgan:
+    enabled: false
+    epochs: 100
+    batch_size: 256
+    generator_dim: [128, 128]
+    discriminator_dim: [128, 128]
+    max_samples_per_class: 20000
+    random_state: 42
+# NEW: MLOps Configuration Sections
+deployment:
+  significance_level: 0.05        # Statistical significance for deployment
+  min_improvement: 0.02           # Minimum improvement required
+  validation_window_days: 7       # Validation data window
+  max_rollback_attempts: 3        # Maximum rollback attempts
+  auto_backup: true               # Auto-backup before deployment
+  deployment_safety_checks: true  # Enable safety checks
+
+drift_detection:
+  psi_critical: 0.25              # PSI > 0.25 = major drift
+  psi_warning: 0.10               # PSI > 0.10 = minor drift
+  ks_significance: 0.05           # K-S test significance level
+  concept_drift_threshold: 0.15   # Concept drift threshold
+  bins: 10                        # Number of bins for PSI
+  min_sample_size: 100            # Minimum samples for reliable detection
+  detection_methods: ['psi', 'ks_test', 'concept_drift']
+
+retraining:
+  drift_threshold: 0.25           # PSI threshold for retraining
+  performance_threshold: 0.05     # 5% performance degradation
+  min_retraining_interval_days: 7 # Minimum days between retraining
+  max_retraining_interval_days: 90 # Maximum days between retraining
+  sliding_window_months: 6        # Sliding window for retraining
+  weighted_retraining: true       # Use weighted retraining
+  auto_deploy: false              # Auto-deploy after retraining
+  validation_split: 0.2           # Validation split for new models
+  min_improvement: 0.02           # Minimum improvement required
+  strategies: ['sliding_window', 'weighted', 'full_batch']
+
+production:
+  continuous_monitoring: true     # Enable continuous monitoring
+  alert_notifications: true       # Enable alert notifications
+  performance_tracking: true       # Track model performance
+  health_checks: true             # Enable system health checks
+  automated_retraining: true      # Enable automated retraining
+  model_versioning: true          # Enable model versioning
+  rollback_mechanism: true        # Enable rollback mechanism
+
+# NEW: Model Performance Tracking Configuration
+model_performance:
+  degradation_thresholds:
+    accuracy_drop: 0.05           # 5% accuracy drop triggers alert
+    auc_drop: 0.03                # 3% AUC drop triggers alert
+    f1_drop: 0.05                 # 5% F1 drop triggers alert
+    precision_drop: 0.05          # 5% precision drop triggers alert
+    recall_drop: 0.05             # 5% recall drop triggers alert
+    mse_increase: 0.10            # 10% MSE increase triggers alert
+    mae_increase: 0.10            # 10% MAE increase triggers alert
+  performance_window_days: 30     # Days to consider for trend analysis
+  min_samples_for_trend: 10      # Minimum samples for reliable trend
+  alert_cooldown_hours: 24       # Hours between similar alerts
+  auto_retraining_threshold: 0.15 # 15% degradation triggers retraining
+  metrics_to_track:
+    - accuracy
+    - precision_macro
+    - recall_macro
+    - f1_macro
+    - roc_auc
+    - log_loss
+    - mse
+    - rmse
+    - mae
+    - r2
+  alert_channels: ['log', 'file', 'email']
+  performance_storage:
+    history_file: "data/performance/performance_history.json"
+    alerts_file: "data/performance/alerts.json"
+    reports_dir: "data/performance/reports"
+
+# NEW: Data Quality Monitoring Configuration
+data_quality:
+  quality_thresholds:
+    completeness_min: 0.95        # 95% completeness required
+    accuracy_min: 0.90            # 90% accuracy required
+    consistency_min: 0.85         # 85% consistency required
+    validity_min: 0.90            # 90% validity required
+    uniqueness_min: 0.95          # 95% uniqueness required
+    timeliness_hours: 24          # Data should be within 24 hours
+    anomaly_threshold: 0.10       # 10% anomaly threshold
+  monitoring_window_days: 30      # Days to consider for trend analysis
+  min_samples_for_analysis: 100   # Minimum samples for reliable analysis
+  alert_cooldown_hours: 12        # Hours between similar alerts
+  auto_retraining_threshold: 0.20 # 20% quality degradation triggers retraining
+  quality_storage:
+    history_file: "data/quality/quality_history.json"
+    alerts_file: "data/quality/alerts.json"
+    reports_dir: "data/quality/reports"
+
+# NEW: CI/CD Pipeline Configuration
+cicd:
+  pipeline:
+    stages: ['test', 'validate', 'security_scan', 'deploy']
+    timeout_minutes: 30
+    max_retries: 3
+    parallel_execution: true
+  testing:
+    unit_test_threshold: 0.90
+    integration_test_threshold: 0.85
+    performance_test_threshold: 0.80
+    data_quality_threshold: 0.85
+  validation:
+    model_performance_threshold: 0.75
+    data_drift_threshold: 0.15
+    feature_importance_stability: 0.80
+  security:
+    vulnerability_scan: true
+    dependency_check: true
+    secrets_scan: true
+    max_severity: 'medium'
+  deployment:
+    environments: ['staging', 'production']
+    auto_approval: false
+    rollback_threshold: 0.70
+    health_check_timeout: 300
+  integrations:
+    github_actions: false
+    jenkins: false
+    gitlab_ci: false
+    azure_devops: false
+    webhook_urls: []

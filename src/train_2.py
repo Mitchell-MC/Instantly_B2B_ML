@@ -52,6 +52,43 @@ def save_model_artifacts(model, X_train, y_train, config, metadata=None):
 
         joblib.dump(payload, artifact_path)
         print(f"✅ Optimized model saved to: {artifact_path}")
+        
+        # MLflow integration - log training run
+        try:
+            from src.mlflow_integration import log_training_run_wrapper
+            
+            # Prepare metrics for MLflow
+            if 'test_metrics' in metadata:
+                mlflow_metrics = metadata['test_metrics']
+            else:
+                # Default metrics if not provided
+                mlflow_metrics = {
+                    'accuracy': 0.0,
+                    'f1_score': 0.0,
+                    'precision': 0.0,
+                    'recall': 0.0
+                }
+            
+            # Log to MLflow
+            run_id = log_training_run_wrapper(
+                model=model,
+                X_train=X_train,
+                y_train=y_train,
+                X_test=metadata.get('X_test', X_train.head(100)),  # Use sample if not provided
+                y_test=metadata.get('y_test', y_train.head(100)),
+                metrics=mlflow_metrics,
+                params=metadata.get('model_params', {}),
+                feature_importance=metadata.get('feature_importance'),
+                artifacts=metadata.get('artifacts', {}),
+                run_name=f"training_run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            )
+            print(f"✅ MLflow training run logged with ID: {run_id}")
+            
+        except ImportError:
+            print("⚠️  MLflow not available - skipping MLflow logging")
+        except Exception as e:
+            print(f"⚠️  MLflow logging failed: {e}")
+        
     except Exception as e:
         print(f"❌ Failed to save model artifacts: {e}")
         raise

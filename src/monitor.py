@@ -119,6 +119,34 @@ def monitor_model_performance(actual_outcomes, predictions, probabilities, confi
         'monitoring_date': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
     
+    # MLflow integration - log performance monitoring
+    try:
+        from src.mlflow_integration import log_prediction_batch_wrapper
+        
+        # Log prediction batch to MLflow for monitoring
+        run_id = log_prediction_batch_wrapper(
+            predictions=predictions,
+            probabilities=probabilities,
+            actuals=actual_outcomes.values if hasattr(actual_outcomes, 'values') else actual_outcomes,
+            metadata={
+                'monitoring_type': 'performance_monitoring',
+                'accuracy': accuracy,
+                'auc': auc,
+                'performance_degraded': performance_degraded,
+                'thresholds': {
+                    'accuracy_threshold': accuracy_threshold,
+                    'auc_threshold': auc_threshold
+                }
+            },
+            run_name=f"performance_monitoring_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        )
+        print(f"✅ MLflow performance monitoring logged with ID: {run_id}")
+        
+    except ImportError:
+        print("⚠️  MLflow not available - skipping MLflow logging")
+    except Exception as e:
+        print(f"⚠️  MLflow logging failed: {e}")
+    
     print(f"✅ Performance monitoring complete:")
     print(f"  🎯 Accuracy: {accuracy:.4f} (Threshold: {accuracy_threshold:.2f})")
     print(f"  📈 AUC: {auc:.4f} (Threshold: {auc_threshold:.2f})")

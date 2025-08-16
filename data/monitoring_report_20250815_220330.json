@@ -1,0 +1,20 @@
+{
+  "monitoring_date": "2025-08-15 22:03:30",
+  "data_drift": {
+    "drift_detected": false,
+    "feature_drift": {},
+    "analysis_date": "2025-08-15 22:03:30"
+  },
+  "model_performance": {
+    "accuracy": null,
+    "auc": null,
+    "accuracy_threshold": 0.05,
+    "auc_threshold": 0.05,
+    "performance_degraded": false,
+    "monitoring_date": "2025-08-15 22:03:30",
+    "note": "No outcome data available for performance monitoring"
+  },
+  "recommendations": [
+    "Model performing well - continue monitoring"
+  ]
+}

@@ -244,3 +244,30 @@ cicd:
     gitlab_ci: false
     azure_devops: false
     webhook_urls: []
+
+# MLflow Configuration
+mlflow:
+  tracking_uri: "sqlite:///mlflow.db"  # Local SQLite tracking store
+  registry_uri: "sqlite:///mlflow.db"  # Local model registry
+  experiment_name: "email_engagement_prediction"
+  model_name: "email_open_predictor"
+  log_artifacts: true
+  log_models: true
+  log_metrics: true
+  log_params: true
+  log_features: true
+  auto_log: true
+  # Model Registry Settings
+  model_registry:
+    stage: "Production"  # Production, Staging, Archived
+    version: "latest"
+    description: "Email engagement prediction model"
+  # Tracking Settings
+  tracking:
+    log_interval: 100
+    log_predictions: true
+    log_actuals: true
+    log_feature_importance: true
+    log_confusion_matrix: true
+    log_roc_curve: true
+    log_precision_recall_curve: true

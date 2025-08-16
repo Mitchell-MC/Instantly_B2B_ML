@@ -1,0 +1,127 @@
+2025-08-15 21:34:37,569 - INFO - ✅ Directory structure verified
+2025-08-15 21:34:37,569 - INFO - 🚀 ML Pipeline Runner initialized
+2025-08-15 21:34:37,569 - INFO - 🎯 Starting Complete ML Pipeline
+2025-08-15 21:34:37,570 - INFO - ============================================================
+2025-08-15 21:34:37,570 - INFO - 📊 Phase 1: Data Preparation
+2025-08-15 21:34:37,570 - INFO -   🔍 Checking data quality...
+2025-08-15 21:34:37,570 - INFO -   ✅ Data preparation completed
+2025-08-15 21:34:37,570 - INFO - 🤖 Phase 2: Model Training
+2025-08-15 21:34:37,570 - INFO -   🎯 Starting model training...
+2025-08-15 21:34:37,571 - INFO -   📁 Found 6 existing models
+2025-08-15 21:34:37,571 - INFO -   💡 Skipping training - models already exist
+2025-08-15 21:34:37,571 - INFO -   💡 Use '--force-train' to retrain models
+2025-08-15 21:34:37,571 - INFO - ✅ Phase 3: Model Validation
+2025-08-15 21:34:37,571 - INFO -   🧪 Running model validation...
+2025-08-15 21:34:37,571 - INFO -   📊 Validating model performance...
+2025-08-15 21:34:51,444 - INFO - ✅ Loaded model performance configuration from config file
+2025-08-15 21:34:51,445 - INFO - 📚 Loaded performance history: 7 records
+2025-08-15 21:34:51,445 - INFO - 📊 Model performance tracker initialized
+2025-08-15 21:34:51,445 - INFO -   ✅ Model validation completed
+2025-08-15 21:34:51,446 - INFO - 🚀 Phase 4: Model Deployment
+2025-08-15 21:34:51,446 - INFO -   🚀 Deploying models...
+2025-08-15 21:34:51,446 - INFO -   📦 Found 6 models for deployment
+2025-08-15 21:34:51,446 - INFO -   ✅ Model deployment completed
+2025-08-15 21:34:51,446 - INFO - 📈 Phase 5: Monitoring Setup
+2025-08-15 21:34:51,446 - INFO -   📈 Setting up monitoring...
+2025-08-15 21:34:52,813 - INFO -   ✅ Monitoring setup completed
+2025-08-15 21:34:52,814 - INFO - 🌐 Phase 6: Service Launch
+2025-08-15 21:34:52,814 - INFO -   🌐 Launching services...
+2025-08-15 21:34:52,814 - INFO -   🔌 API service ready to launch
+2025-08-15 21:34:52,814 - INFO -   💡 Use 'python run_ml_pipeline.py serve' to start API
+2025-08-15 21:34:52,814 - INFO -   📊 Business dashboard ready
+2025-08-15 21:34:52,814 - INFO -   💡 Use 'python run_ml_pipeline.py dashboard' to launch dashboard
+2025-08-15 21:34:52,815 - INFO -   ✅ Service launch preparation completed
+2025-08-15 21:34:52,815 - INFO - 🎉 Complete Pipeline Finished Successfully!
+2025-08-15 21:34:52,815 - INFO - ============================================================
+2025-08-15 21:34:52,815 - INFO - 📊 PIPELINE EXECUTION SUMMARY
+2025-08-15 21:34:52,815 - INFO - ============================================================
+2025-08-15 21:34:52,815 - INFO - ✅ Training Data: Available
+2025-08-15 21:34:52,815 - INFO - ✅ Models: Available
+2025-08-15 21:34:52,815 - INFO - ✅ API Service: Available
+2025-08-15 21:34:52,816 - INFO - ✅ Dashboard: Available
+2025-08-15 21:34:52,816 - INFO - ✅ Monitoring: Available
+2025-08-15 21:34:52,816 - INFO - ✅ Configuration: Available
+2025-08-15 21:34:52,816 - INFO - ============================================================
+2025-08-15 21:34:52,816 - INFO - 🚀 NEXT STEPS:
+2025-08-15 21:34:52,816 - INFO - 1. Start API: python run_ml_pipeline.py serve
+2025-08-15 21:34:52,816 - INFO - 2. Launch Dashboard: python run_ml_pipeline.py dashboard
+2025-08-15 21:34:52,817 - INFO - 3. Run Monitoring: python run_ml_pipeline.py monitor
+2025-08-15 21:34:52,817 - INFO - 4. Use Docker: python run_ml_pipeline.py docker start
+2025-08-15 21:34:52,818 - INFO - ============================================================
+2025-08-15 21:42:30,269 - INFO - ✅ Directory structure verified
+2025-08-15 21:42:30,269 - INFO - 🚀 ML Pipeline Runner initialized
+2025-08-15 21:42:30,269 - INFO - 🚀 Launching API Service on 0.0.0.0:8000
+2025-08-15 21:42:30,269 - INFO - 🔌 Starting API service...
+2025-08-15 21:42:30,270 - INFO - 📚 API docs will be available at: http://0.0.0.0:8000/docs
+2025-08-15 21:42:30,270 - INFO - 🔍 Health check: http://0.0.0.0:8000/health
+2025-08-15 21:43:05,644 - INFO - ✅ Directory structure verified
+2025-08-15 21:43:05,644 - INFO - 🚀 ML Pipeline Runner initialized
+2025-08-15 21:43:05,644 - INFO - 🚀 Launching API Service on 0.0.0.0:8000
+2025-08-15 21:43:05,645 - INFO - 🔌 Starting API service...
+2025-08-15 21:43:05,645 - INFO - 📚 API docs will be available at: http://0.0.0.0:8000/docs
+2025-08-15 21:43:05,645 - INFO - 🔍 Health check: http://0.0.0.0:8000/health
+2025-08-15 21:43:28,516 - INFO - ✅ Directory structure verified
+2025-08-15 21:43:28,516 - INFO - 🚀 ML Pipeline Runner initialized
+2025-08-15 21:43:28,517 - INFO - 🚀 Launching API Service on 0.0.0.0:8000
+2025-08-15 21:43:28,517 - INFO - 🔌 Starting API service...
+2025-08-15 21:43:28,517 - INFO - 📚 API docs will be available at: http://0.0.0.0:8000/docs
+2025-08-15 21:43:28,517 - INFO - 🔍 Health check: http://0.0.0.0:8000/health
+2025-08-15 21:47:55,787 - INFO - ✅ Directory structure verified
+2025-08-15 21:47:55,787 - INFO - 🚀 ML Pipeline Runner initialized
+2025-08-15 21:47:55,788 - INFO - 🚀 Launching API Service on localhost:8000
+2025-08-15 21:47:55,788 - INFO - 🔌 Starting API service...
+2025-08-15 21:47:55,788 - INFO - 📚 API docs will be available at: http://localhost:8000/docs
+2025-08-15 21:47:55,788 - INFO - 🔍 Health check: http://localhost:8000/health
+2025-08-15 22:01:37,198 - INFO - ✅ Directory structure verified
+2025-08-15 22:01:37,198 - INFO - 🚀 ML Pipeline Runner initialized
+2025-08-15 22:01:37,199 - INFO - 🚀 Launching API Service on localhost:8001
+2025-08-15 22:01:37,199 - INFO - 🔌 Starting API service...
+2025-08-15 22:01:37,199 - INFO - 📚 API docs will be available at: http://localhost:8001/docs
+2025-08-15 22:01:37,199 - INFO - 🔍 Health check: http://localhost:8001/health
+2025-08-15 22:01:37,200 - INFO - 🏠 Root endpoint: http://localhost:8001/
+2025-08-15 22:03:28,371 - INFO - ✅ Directory structure verified
+2025-08-15 22:03:28,371 - INFO - 🚀 ML Pipeline Runner initialized
+2025-08-15 22:03:28,371 - INFO - 📊 Starting Monitoring Pipeline
+2025-08-15 22:03:28,371 - INFO - 🔍 Running drift detection...
+2025-08-15 22:03:30,360 - INFO - ✅ Drift detection completed
+2025-08-15 22:03:30,360 - INFO - 🔍 Running data quality monitoring...
+2025-08-15 22:03:30,784 - INFO - ✅ Loaded data quality configuration from config file
+2025-08-15 22:03:30,784 - INFO - 📚 Loaded quality history: 6 records
+2025-08-15 22:03:30,785 - INFO - 🔍 Data quality monitor initialized
+2025-08-15 22:03:30,785 - INFO - ✅ Data quality monitoring completed
+2025-08-15 22:03:30,785 - INFO - ✅ Monitoring pipeline completed successfully!
+2025-08-15 22:03:55,418 - INFO - ✅ Directory structure verified
+2025-08-15 22:03:55,418 - INFO - 🚀 ML Pipeline Runner initialized
+2025-08-15 22:03:55,419 - INFO - 📊 Launching Business Intelligence Dashboard
+2025-08-15 22:03:55,419 - INFO - 🌐 Starting Streamlit dashboard...
+2025-08-15 22:03:55,419 - INFO - 💡 Dashboard will open in your browser
+2025-08-15 22:03:55,419 - INFO - 🔄 Use Ctrl+C to stop the dashboard
+2025-08-15 22:05:41,999 - INFO - ✅ Directory structure verified
+2025-08-15 22:05:42,000 - INFO - 🚀 ML Pipeline Runner initialized
+2025-08-15 22:05:42,000 - INFO - 📊 Launching Business Intelligence Dashboard
+2025-08-15 22:05:42,000 - INFO - 🌐 Starting Streamlit dashboard...
+2025-08-15 22:05:42,000 - INFO - 💡 Dashboard will open in your browser
+2025-08-15 22:05:42,000 - INFO - 🔄 Use Ctrl+C to stop the dashboard
+2025-08-15 22:24:19,091 - INFO - ✅ Directory structure verified
+2025-08-15 22:24:19,092 - INFO - 🚀 ML Pipeline Runner initialized
+2025-08-15 22:24:19,092 - INFO - 📊 Launching Business Intelligence Dashboard
+2025-08-15 22:24:19,092 - INFO - 🌐 Starting Streamlit dashboard...
+2025-08-15 22:24:19,093 - INFO - 💡 Dashboard will open in your browser
+2025-08-15 22:24:19,093 - INFO - 🔄 Use Ctrl+C to stop the dashboard
+2025-08-15 22:25:20,987 - INFO - ✅ Directory structure verified
+2025-08-15 22:25:20,988 - INFO - 🚀 ML Pipeline Runner initialized
+2025-08-15 22:25:20,988 - INFO - 🎯 Starting Model Training Pipeline
+2025-08-15 22:25:20,988 - INFO - 🔄 Force training enabled - will retrain existing models
+2025-08-15 22:25:20,988 - INFO -   🔍 Checking data quality...
+2025-08-15 22:25:20,988 - INFO -   ✅ Data preparation completed
+2025-08-15 22:25:20,988 - INFO -   🎯 Starting model training...
+2025-08-15 22:25:20,989 - INFO -   📁 Found 6 existing models
+2025-08-15 22:25:20,989 - INFO -   💡 Skipping training - models already exist
+2025-08-15 22:25:20,989 - INFO -   💡 Use '--force-train' to retrain models
+2025-08-15 22:25:20,989 - INFO -   🧪 Running model validation...
+2025-08-15 22:25:20,989 - INFO -   📊 Validating model performance...
+2025-08-15 22:25:22,994 - INFO - ✅ Loaded model performance configuration from config file
+2025-08-15 22:25:22,996 - INFO - 📚 Loaded performance history: 7 records
+2025-08-15 22:25:22,996 - INFO - 📊 Model performance tracker initialized
+2025-08-15 22:25:22,996 - INFO -   ✅ Model validation completed
+2025-08-15 22:25:22,997 - INFO - ✅ Training pipeline completed successfully!

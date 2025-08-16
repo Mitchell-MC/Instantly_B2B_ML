@@ -1,0 +1,157 @@
+version: '3.8'
+
+services:
+  # Main ML API Service
+  ml-api:
+    build:
+      context: .
+      target: production
+    container_name: email-engagement-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./models:/app/models
+    environment:
+      - PYTHONPATH=/app/src
+      - ENVIRONMENT=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ml-network
+
+  # Development API Service
+  ml-api-dev:
+    build:
+      context: .
+      target: development
+    container_name: email-engagement-api-dev
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./models:/app/models
+      - ./src:/app/src
+    environment:
+      - PYTHONPATH=/app/src
+      - ENVIRONMENT=development
+    restart: unless-stopped
+    profiles:
+      - dev
+    networks:
+      - ml-network
+
+  # Jupyter Lab for Analysis
+  jupyter:
+    build:
+      context: .
+      target: jupyter
+    container_name: email-engagement-jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./models:/app/models
+      - ./src:/app/src
+      - ./notebooks:/app/notebooks
+    environment:
+      - PYTHONPATH=/app/src
+      - JUPYTER_ENABLE_LAB=yes
+    restart: unless-stopped
+    profiles:
+      - analysis
+    networks:
+      - ml-network
+
+  # MLflow Tracking Server
+  mlflow:
+    image: python:3.9-slim
+    container_name: mlflow-tracking
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+      - ./mlflow:/app/mlflow
+    working_dir: /app
+    command: >
+      bash -c "pip install mlflow &&
+               mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlflow"
+    restart: unless-stopped
+    profiles:
+      - mlflow
+    networks:
+      - ml-network
+
+  # Redis for Caching (Optional)
+  redis:
+    image: redis:7-alpine
+    container_name: ml-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    profiles:
+      - cache
+    networks:
+      - ml-network
+
+  # PostgreSQL for Production Database (Optional)
+  postgres:
+    image: postgres:15-alpine
+    container_name: ml-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ml_pipeline
+      POSTGRES_USER: mluser
+      POSTGRES_PASSWORD: mlpassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    profiles:
+      - database
+    networks:
+      - ml-network
+
+  # Nginx Reverse Proxy (Optional)
+  nginx:
+    image: nginx:alpine
+    container_name: ml-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - ml-api
+    restart: unless-stopped
+    profiles:
+      - production
+    networks:
+      - ml-network
+
+volumes:
+  redis_data:
+  postgres_data:
+
+networks:
+  ml-network:
+    driver: bridge
+
+# Default profile runs only the production API
+# Use --profile dev for development environment
+# Use --profile analysis for Jupyter environment
+# Use --profile mlflow for MLflow tracking
+# Use --profile cache for Redis caching
+# Use --profile database for PostgreSQL database
+# Use --profile production for full production stack with Nginx

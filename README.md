@@ -184,25 +184,260 @@ mlflow:
 - **Jupyter Lab**: Port 8888
 - **MLflow**: Port 5000
 
-## 📊 **Features**
+## 📊 **Enhanced Features**
 
-### **Advanced ML Pipeline**
-- **Hybrid Target Support**: Binary (`opened`) or multi-class (`engagement_level`)
-- **Feature Engineering**: Text preprocessing, temporal features, interaction features
-- **Model Ensemble**: XGBoost, Random Forest, and voting strategies
+### **FastAPI Service (`src/api_service.py`)**
+A production-ready REST API service that provides model serving, health monitoring, and integration with your existing ML pipeline components.
+
+#### **Key Features**
+- **Model Serving**: REST API endpoints for predictions
+- **Health Monitoring**: Built-in health checks and system status
+- **Batch Processing**: Support for CSV file batch predictions
+- **Monitoring Integration**: Automatic logging to performance tracker
+- **Drift Detection**: API endpoints for drift analysis
+- **OpenAPI Documentation**: Auto-generated API docs at `/docs`
+
+#### **API Endpoints**
+- `GET /` - Service information
+- `GET /health` - Health check with model status
+- `GET /model/info` - Model metadata and performance
+- `POST /predict` - Single/batch prediction endpoint
+- `POST /predict/batch` - CSV file batch processing
+- `GET /monitoring/drift` - Data drift analysis
+- `GET /monitoring/performance` - Performance metrics
+
+#### **Usage Examples**
+```python
+import requests
+import json
+
+# API endpoint
+url = "http://localhost:8000/predict"
+
+# Sample data
+data = {
+    "data": [
+        {
+            "organization_employees": 500,
+            "daily_limit": 1000,
+            "esp_code": 5,
+            "founded_year": 2010,
+            "seniority_level": "Manager"
+        }
+    ],
+    "include_probabilities": True,
+    "include_feature_importance": False
+}
+
+# Make prediction
+response = requests.post(url, json=data)
+result = response.json()
+
+print(f"Prediction: {result['predictions']}")
+print(f"Probability: {result['probabilities']}")
+```
+
+### **Docker Containerization**
+Complete containerization solution with multi-stage builds, development/production environments, and optional services.
+
+#### **Docker Images**
+- **Base Image** (`email-engagement-ml:base`): Python 3.9 slim environment with ML dependencies
+- **Production Image** (`email-engagement-ml:production`): Security-focused with health checks
+- **Development Image** (`email-engagement-ml:development`): Full development environment
+
+#### **Docker Profiles**
+```bash
+# Production profile
+python run_ml_pipeline.py --docker start --profile production
+
+# Development profile
+python run_ml_pipeline.py --docker start --profile development
+
+# Analysis profile
+python run_ml_pipeline.py --docker start --profile analysis
+```
+
+### **Business Intelligence Dashboard**
+Streamlit-based dashboard providing comprehensive business insights and monitoring capabilities.
+
+#### **Dashboard Sections**
+- **Overview**: High-level metrics and system status
+- **Performance**: Model performance tracking and trends
+- **Quality**: Data quality monitoring and alerts
+- **Drift**: Data drift detection and analysis
+- **Insights**: Feature importance and SHAP analysis
+- **Monitoring**: Real-time system monitoring
+
+## 🧪 **CI/CD Pipeline**
+
+The CI/CD Pipeline provides automated testing, validation, and deployment of machine learning models in your MLOps pipeline.
+
+### **Features**
+- **Automated Testing**: Unit, integration, and performance tests
+- **Model Validation**: Performance and data quality validation
+- **Security Scanning**: File permission checks and vulnerability assessment
+- **Automated Deployment**: Environment management with rollback mechanisms
+- **Monitoring & Reporting**: Complete pipeline execution history and metrics
+
+### **Pipeline Stages**
+| Stage | Description | Threshold |
+|-------|-------------|-----------|
+| `test` | Automated testing | 90% unit, 85% integration, 80% performance |
+| `validate` | Model and data validation | 75% performance, 85% quality |
+| `security_scan` | Security validation | Medium risk tolerance |
+| `deploy` | Model deployment | 70% health check threshold |
+
+### **Configuration**
+```yaml
+cicd:
+  pipeline:
+    stages: ['test', 'validate', 'security_scan', 'deploy']
+    timeout_minutes: 30
+    max_retries: 3
+    parallel_execution: true
+  testing:
+    unit_test_threshold: 0.90
+    integration_test_threshold: 0.85
+    performance_test_threshold: 0.80
+    data_quality_threshold: 0.85
+  validation:
+    model_performance_threshold: 0.75
+    data_drift_threshold: 0.15
+    feature_importance_stability: 0.80
+  security:
+    vulnerability_scan: true
+    dependency_check: true
+    secrets_scan: true
+    max_severity: 'medium'
+  deployment:
+    environments: ['staging', 'production']
+    auto_approval: false
+    rollback_threshold: 0.70
+    health_check_timeout: 300
+```
+
+## 🔍 **Data Quality Monitoring**
+
+The Data Quality Monitoring System provides comprehensive monitoring and validation of data quality metrics in your MLOps pipeline.
+
+### **Quality Metrics**
+- **Completeness**: Missing value detection and analysis
+- **Type Consistency**: Data type validation and consistency checks
+- **Range Validity**: Statistical range validation for numeric data
+- **Uniqueness**: Duplicate detection and uniqueness analysis
+- **Freshness**: Timestamp validation and data recency checks
+- **Anomaly Detection**: Statistical outlier detection using IQR method
+
+### **Features**
+- **Automated Alerting**: Quality degradation detection with severity classification
+- **Trend Analysis**: Quality trend direction and statistical analysis
+- **Reporting & Visualization**: Comprehensive quality reports and charts
+- **MLOps Integration**: Production monitoring and automated retraining triggers
+
+### **Configuration**
+```yaml
+data_quality:
+  quality_thresholds:
+    completeness_min: 0.95        # 95% completeness required
+    accuracy_min: 0.90            # 90% accuracy required
+    consistency_min: 0.85         # 85% consistency required
+    validity_min: 0.90            # 90% validity required
+    uniqueness_min: 0.95          # 95% uniqueness required
+    timeliness_hours: 24          # Data should be within 24 hours
+    anomaly_threshold: 0.10       # 10% anomaly threshold
+  monitoring_window_days: 30      # Days to consider for trend analysis
+  min_samples_for_analysis: 100   # Minimum samples for reliable analysis
+  alert_cooldown_hours: 12        # Hours between similar alerts
+  auto_retraining_threshold: 0.20 # 20% quality degradation triggers retraining
+```
+
+## 📊 **Model Performance Tracking**
+
+The `ModelPerformanceTracker` class provides real-time monitoring, degradation detection, and automated alerting for model performance issues.
+
+### **Features**
+- **Comprehensive Metrics Tracking**: Classification, regression, and common metrics
+- **Automated Degradation Detection**: Performance monitoring with configurable thresholds
+- **Historical Performance Analysis**: Trend analysis and baseline monitoring
+- **Automated Alerting**: Real-time alerts with multiple channels
+- **Reporting & Visualization**: Performance reports and trend plots
+
+### **Configuration**
+```yaml
+model_performance:
+  degradation_thresholds:
+    accuracy_drop: 0.05           # 5% accuracy drop triggers alert
+    auc_drop: 0.03                # 3% AUC drop triggers alert
+    f1_drop: 0.05                 # 5% F1 drop triggers alert
+    precision_drop: 0.05          # 5% precision drop triggers alert
+    recall_drop: 0.05             # 5% recall drop triggers alert
+    mse_increase: 0.10            # 10% MSE increase triggers alert
+    mae_increase: 0.10            # 10% MAE increase triggers alert
+  performance_window_days: 30     # Days to consider for trend analysis
+  min_samples_for_trend: 10      # Minimum samples for reliable trend
+  alert_cooldown_hours: 24       # Hours between similar alerts
+  auto_retraining_threshold: 0.15 # 15% degradation triggers retraining
+  metrics_to_track:
+    - accuracy
+    - precision_macro
+    - recall_macro
+    - f1_macro
+    - roc_auc
+    - log_loss
+    - mse
+    - rmse
+    - mae
+    - r2
+  alert_channels: ['log', 'file', 'email']
+  performance_storage:
+    history_file: "data/performance/performance_history.json"
+    alerts_file: "data/performance/alerts.json"
+    reports_dir: "data/performance/reports"
+```
+
+### **Usage Examples**
+```python
+from src.model_performance_tracker import ModelPerformanceTracker
+
+# Initialize the tracker
+tracker = ModelPerformanceTracker()
+
+# Track model performance
+performance_result = tracker.track_performance(
+    y_true=y_true,           # True labels
+    y_pred=y_pred,           # Predicted labels
+    y_pred_proba=y_pred_proba,  # Predicted probabilities
+    metadata={
+        'model_version': 'v1.0',
+        'data_source': 'production',
+        'timestamp': '2024-01-01T00:00:00Z'
+    }
+)
+
+# Check for degradation
+degradation_result = tracker.check_degradation()
+
+# Generate performance report
+report = tracker.generate_performance_report()
+```
+
+## 🚀 **Advanced ML Pipeline**
+
+### **Hybrid Target Support**
+- **Binary Target**: `opened` (0/1) for simple open/not-open classification
+- **Multi-class Target**: `engagement_level` (0, 1, 2, 3) for detailed engagement analysis
+
+### **Feature Engineering**
+- **Text Preprocessing**: TF-IDF vectorization for text fields
+- **Temporal Features**: Date-based feature extraction
+- **Interaction Features**: Cross-feature combinations
+- **Domain Expertise**: B2B marketing-specific feature engineering
+
+### **Model Ensemble**
+- **XGBoost**: Primary gradient boosting model
+- **Random Forest**: Robust ensemble method
+- **Voting Strategies**: Weighted voting for optimal performance
 - **Hyperparameter Tuning**: Automated optimization with MLflow
-
-### **Production MLOps**
-- **Champion/Challenger Deployment**: Safe model updates with statistical testing
-- **Advanced Drift Detection**: PSI, K-S tests, and concept drift detection
-- **Automated Retraining**: Intelligent triggers based on drift and performance
-- **Real-time Monitoring**: Continuous performance tracking and alerting
-
-### **Enterprise Features**
-- **FastAPI Service**: Production-ready REST API with OpenAPI docs
-- **Business Dashboard**: Interactive insights for stakeholders
-- **Docker Containerization**: Multi-stage builds with development/production targets
-- **CI/CD Pipeline**: Automated testing, validation, and deployment
 
 ## 🚀 **Deployment Scenarios**
 
@@ -310,12 +545,14 @@ You now have a **production-ready, enterprise-grade ML pipeline** that includes:
 ✅ **Business Dashboard** - Streamlit-based insights  
 ✅ **Docker Containerization** - Multi-environment deployment  
 ✅ **CI/CD Pipeline** - Automated testing and deployment  
+✅ **Data Quality Monitoring** - Comprehensive quality tracking  
+✅ **Performance Tracking** - Real-time model monitoring  
 
 Your ML pipeline is ready for **production deployment** and **enterprise use**! 🚀
 
 ## 📞 **Support**
 
-- **Documentation**: See `ENHANCED_FEATURES_README.md` for detailed feature information
+- **Documentation**: This comprehensive README covers all features
 - **Logs**: Check `logs/pipeline_runner.log` for execution details
 - **Configuration**: Modify `config/main_config.yaml` for customization
 - **Issues**: Use the unified runner with `--help` for usage information 

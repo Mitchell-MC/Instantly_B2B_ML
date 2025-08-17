@@ -1,0 +1,281 @@
+{
+    "name": "Lead Enrichment & Model Training Pipeline",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "GET",
+          "path": "api/v2/leads",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "nodeCredentialType": "instantlyApi",
+          "options": {}
+        },
+        "id": "get-instantly-leads",
+        "name": "Get Instantly Leads",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [240, 300],
+        "webhookId": "instantly-leads"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "enrichment-check",
+                "leftValue": "={{ $json.apollo_contact_id }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "isEmpty"
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        },
+        "id": "check-enrichment-status",
+        "name": "Check Enrichment Status",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [460, 300]
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "api/v1/people/search",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "nodeCredentialType": "apolloApi",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "q",
+                "value": "={{ $json.email }}"
+              },
+              {
+                "name": "page",
+                "value": "1"
+              },
+              {
+                "name": "per_page",
+                "value": "1"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "enrich-from-apollo",
+        "name": "Enrich from Apollo",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [680, 200]
+      },
+      {
+        "parameters": {
+          "httpMethod": "GET",
+          "path": "api/v2/emails",
+          "authentication": "genericCredentialType",
+          "genericAuthType": "httpHeaderAuth",
+          "nodeCredentialType": "instantlyApi",
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "campaign_id",
+                "value": "={{ $json.campaign_id }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "get-email-metrics",
+        "name": "Get Email Metrics",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [680, 400]
+      },
+      {
+        "parameters": {
+          "jsCode": "// Merge Instantly leads with Apollo enrichment and email metrics\nconst enrichedLeads = [];\n\nfor (const lead of $input.all()) {\n  const leadData = lead.json;\n  \n  // Find corresponding Apollo data\n  const apolloData = leadData.apollo_enrichment || {};\n  \n  // Find corresponding email metrics\n  const emailMetrics = leadData.email_metrics || {};\n  \n  // Create enriched lead object\n  const enrichedLead = {\n    // Instantly data\n    instantly_id: leadData.id,\n    email: leadData.email,\n    campaign_id: leadData.campaign_id,\n    timestamp_created: leadData.timestamp_created,\n    \n    // Apollo enrichment\n    apollo_contact_id: apolloData.id,\n    first_name: apolloData.first_name || leadData.first_name,\n    last_name: apolloData.last_name || leadData.last_name,\n    title: apolloData.title || leadData.title,\n    company_name: apolloData.organization?.name,\n    company_industry: apolloData.organization?.industry,\n    company_size: apolloData.organization?.size,\n    company_founded_year: apolloData.organization?.founded_year,\n    company_website: apolloData.organization?.website,\n    company_linkedin: apolloData.organization?.linkedin_url,\n    location_city: apolloData.location?.city,\n    location_state: apolloData.location?.state,\n    location_country: apolloData.location?.country,\n    \n    // Email engagement metrics\n    email_open_count: emailMetrics.open_count || 0,\n    email_click_count: emailMetrics.click_count || 0,\n    email_reply_count: emailMetrics.reply_count || 0,\n    email_bounce_count: emailMetrics.bounce_count || 0,\n    \n    // Enrichment metadata\n    enrichment_status: apolloData.id ? 'enriched' : 'not_enriched',\n    enrichment_timestamp: new Date().toISOString(),\n    \n    // Raw data for feature engineering\n    apollo_raw_data: apolloData,\n    instantly_raw_data: leadData\n  };\n  \n  enrichedLeads.push(enrichedLead);\n}\n\nreturn enrichedLeads;"
+        },
+        "id": "merge-data",
+        "name": "Merge & Enrich Data",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [900, 300]
+      },
+      {
+        "parameters": {
+          "jsCode": "// Prepare data for ML training\nconst trainingData = $input.all().map(lead => {\n  const data = lead.json;\n  \n  // Create engagement level target (0=no engagement, 1=open, 2=click/reply)\n  let engagement_level = 0;\n  if (data.email_click_count > 0 || data.email_reply_count > 0) {\n    engagement_level = 2;\n  } else if (data.email_open_count > 0) {\n    engagement_level = 1;\n  }\n  \n  // Create features for ML model\n  const features = {\n    // Basic contact features\n    has_first_name: data.first_name ? 1 : 0,\n    has_last_name: data.last_name ? 1 : 0,\n    has_title: data.title ? 1 : 0,\n    has_company: data.company_name ? 1 : 0,\n    \n    // Company features\n    company_size_numeric: data.company_size ? parseInt(data.company_size.replace(/[^0-9]/g, '')) : 0,\n    company_age: data.company_founded_year ? (2025 - parseInt(data.company_founded_year)) : 0,\n    has_website: data.company_website ? 1 : 0,\n    has_linkedin: data.company_linkedin ? 1 : 0,\n    \n    // Location features\n    has_city: data.location_city ? 1 : 0,\n    has_state: data.location_state ? 1 : 0,\n    has_country: data.location_country ? 1 : 0,\n    \n    // Campaign features\n    campaign_id_hash: data.campaign_id ? data.campaign_id.split('-')[0] : '',\n    \n    // Enrichment features\n    enrichment_completeness: data.enrichment_status === 'enriched' ? 1 : 0,\n    \n    // Target variable\n    engagement_level: engagement_level\n  };\n  \n  return features;\n});\n\n// Save to CSV for training\nconst csvData = trainingData.map(row => {\n  return Object.values(row).join(',');\n});\n\nconst headers = Object.keys(trainingData[0]).join(',');\ncsvData.unshift(headers);\n\nreturn {\n  json: {\n    training_data: trainingData,\n    csv_content: csvData.join('\\n'),\n    total_leads: trainingData.length,\n    engagement_distribution: {\n      'no_engagement': trainingData.filter(r => r.engagement_level === 0).length,\n      'opened': trainingData.filter(r => r.engagement_level === 1).length,\n      'engaged': trainingData.filter(r => r.engagement_level === 2).length\n    }\n  }\n};"
+        },
+        "id": "prepare-ml-data",
+        "name": "Prepare ML Training Data",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [1120, 300]
+      },
+      {
+        "parameters": {
+          "operation": "write",
+          "fileName": "enriched_leads_training_data.csv",
+          "options": {}
+        },
+        "id": "save-training-data",
+        "name": "Save Training Data",
+        "type": "n8n-nodes-base.fileOperations",
+        "typeVersion": 1.1,
+        "position": [1340, 300]
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "url": "http://localhost:8000/train",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "data_file",
+                "value": "enriched_leads_training_data.csv"
+              },
+              {
+                "name": "model_type",
+                "value": "xgboost"
+              },
+              {
+                "name": "target_column",
+                "value": "engagement_level"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "train-ml-model",
+        "name": "Train ML Model",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [1560, 300]
+      },
+      {
+        "parameters": {
+          "jsCode": "// Log training results\nconst trainingResult = $input.first().json;\n\nconsole.log('🎯 ML Model Training Complete!');\nconsole.log('📊 Model Performance:');\nconsole.log(`  Accuracy: ${trainingResult.accuracy}%`);\nconsole.log(`  Precision: ${trainingResult.precision}%`);\nconsole.log(`  Recall: ${trainingResult.recall}%`);\nconsole.log(`  F1-Score: ${trainingResult.f1_score}%`);\nconsole.log(`  Model saved to: ${trainingResult.model_path}`);\n\nreturn {\n  json: {\n    status: 'success',\n    message: 'ML model training completed successfully',\n    results: trainingResult,\n    timestamp: new Date().toISOString()\n  }\n};"
+        },
+        "id": "log-training-results",
+        "name": "Log Training Results",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [1780, 300]
+      }
+    ],
+    "connections": {
+      "Get Instantly Leads": {
+        "main": [
+          [
+            {
+              "node": "Check Enrichment Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Enrichment Status": {
+        "main": [
+          [
+            {
+              "node": "Enrich from Apollo",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Get Email Metrics",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Enrich from Apollo": {
+        "main": [
+          [
+            {
+              "node": "Merge & Enrich Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Email Metrics": {
+        "main": [
+          [
+            {
+              "node": "Merge & Enrich Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Merge & Enrich Data": {
+        "main": [
+          [
+            {
+              "node": "Prepare ML Training Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare ML Training Data": {
+        "main": [
+          [
+            {
+              "node": "Save Training Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Save Training Data": {
+        "main": [
+          [
+            {
+              "node": "Train ML Model",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Train ML Model": {
+        "main": [
+          [
+            {
+              "node": "Log Training Results",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "pinData": {},
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null,
+    "tags": [],
+    "triggerCount": 0,
+    "updatedAt": "2025-01-15T10:00:00.000Z",
+    "versionId": "1"
+  }

@@ -1,0 +1,235 @@
+# Silver Layer ETL Pipeline Configuration
+# Production-ready configuration for bronze to silver transformation
+
+# Database Configuration
+database:
+  host: 127.0.0.1
+  port: 5431
+  database: postgres
+  user: mitchell
+  password: CTej3Ba8uBrx6o
+  schema_bronze: leads
+  schema_silver: leads
+  connection_pool_size: 10
+  connection_timeout: 30
+  ssl_mode: prefer
+
+# Processing Configuration
+processing:
+  batch_size: 1000
+  max_workers: 4
+  memory_limit_gb: 8
+  incremental_processing: true
+  default_lookback_days: 7
+  max_lookback_days: 30
+  
+  # Feature engineering settings
+  feature_engineering:
+    text_max_features: 300
+    categorical_max_categories: 20
+    outlier_percentile_caps: [0.01, 0.99]
+    quality_score_threshold: 0.5
+    
+  # Data validation rules
+  validation:
+    required_columns:
+      - email
+      - campaign
+      - timestamp_created
+    
+    data_types:
+      email_open_count: numeric
+      email_click_count: numeric
+      email_reply_count: numeric
+      timestamp_created: datetime
+    
+    constraints:
+      engagement_level: [0, 1, 2]
+      data_quality_score: [0.0, 1.0]
+      text_quality_score: [0.0, 3.0]
+
+# Pipeline Scheduling
+scheduling:
+  # Cron expressions for automated runs
+  incremental_schedule: "0 */6 * * *"  # Every 6 hours
+  full_refresh_schedule: "0 2 * * 0"   # Weekly on Sunday at 2 AM
+  monitoring_schedule: "*/15 * * * *"  # Every 15 minutes
+  
+  # Execution settings
+  max_runtime_hours: 2
+  retry_attempts: 3
+  retry_delay_minutes: 5
+  alert_on_failure: true
+
+# Data Quality Monitoring
+data_quality:
+  thresholds:
+    completeness_min: 0.95
+    accuracy_min: 0.90
+    consistency_min: 0.85
+    uniqueness_min: 0.95
+    timeliness_max_hours: 24
+  
+  alerts:
+    quality_drop_threshold: 0.1
+    volume_change_threshold: 0.2
+    processing_delay_hours: 6
+    
+  metrics:
+    track_record_counts: true
+    track_null_percentages: true
+    track_duplicate_rates: true
+    track_processing_times: true
+
+# Performance Optimization
+performance:
+  # Memory management
+  chunk_size: 10000
+  max_memory_usage_gb: 6
+  garbage_collection_frequency: 1000
+  
+  # Database optimization
+  use_bulk_inserts: true
+  parallel_processing: true
+  index_hints: true
+  vacuum_analyze_after_load: true
+  
+  # Caching
+  enable_feature_caching: true
+  cache_expiry_hours: 24
+  cache_max_size_mb: 1024
+
+# Logging Configuration
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+  handlers:
+    file:
+      enabled: true
+      path: "logs/silver_layer_pipeline.log"
+      max_size_mb: 100
+      backup_count: 5
+      rotation: daily
+    
+    console:
+      enabled: true
+      level: INFO
+    
+    database:
+      enabled: true
+      table: ml_lead_scoring.pipeline_logs
+      buffer_size: 100
+  
+  # Log specific events
+  log_data_quality_metrics: true
+  log_feature_statistics: true
+  log_performance_metrics: true
+
+# Error Handling
+error_handling:
+  # Failure modes
+  continue_on_validation_errors: false
+  continue_on_feature_engineering_errors: true
+  continue_on_quality_check_failures: true
+  
+  # Recovery settings
+  enable_automatic_recovery: true
+  recovery_checkpoint_frequency: 1000
+  max_error_rate: 0.05
+  
+  # Notification settings
+  notify_on_critical_errors: true
+  notify_on_data_quality_issues: true
+  error_escalation_hours: 2
+
+# Monitoring and Alerting
+monitoring:
+  enabled: true
+  
+  # Metrics collection
+  collect_system_metrics: true
+  collect_pipeline_metrics: true
+  collect_data_metrics: true
+  
+  # Alert channels
+  alerts:
+    email:
+      enabled: false
+      smtp_server: ""
+      recipients: []
+    
+    slack:
+      enabled: false
+      webhook_url: ""
+      channel: "#data-engineering"
+    
+    database:
+      enabled: true
+      alert_table: ml_lead_scoring.pipeline_alerts
+  
+  # Health checks
+  health_checks:
+    database_connectivity: true
+    table_accessibility: true
+    data_freshness: true
+    processing_performance: true
+
+# Environment-specific Settings
+environments:
+  development:
+    processing:
+      batch_size: 100
+      max_workers: 2
+    logging:
+      level: DEBUG
+    data_quality:
+      thresholds:
+        completeness_min: 0.80
+    performance:
+      chunk_size: 1000
+  
+  staging:
+    processing:
+      batch_size: 500
+      max_workers: 3
+    logging:
+      level: INFO
+    data_quality:
+      thresholds:
+        completeness_min: 0.90
+    performance:
+      chunk_size: 5000
+  
+  production:
+    processing:
+      batch_size: 1000
+      max_workers: 4
+    logging:
+      level: INFO
+    data_quality:
+      thresholds:
+        completeness_min: 0.95
+    performance:
+      chunk_size: 10000
+    monitoring:
+      enabled: true
+    error_handling:
+      notify_on_critical_errors: true
+
+# Feature Store Configuration (optional)
+feature_store:
+  enabled: false
+  type: postgresql  # or 'redis', 'feast'
+  
+  # Feature versioning
+  enable_versioning: true
+  retention_days: 90
+  
+  # Feature serving
+  enable_online_serving: false
+  serving_endpoint: ""
+  
+  # Feature validation
+  enable_schema_validation: true
+  enable_drift_detection: true

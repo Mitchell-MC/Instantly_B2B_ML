@@ -1,28 +1,35 @@
-# 🚀 Email Engagement ML Pipeline - Production Ready
+# 🚀 ML-Driven Lead Scoring System - N8N + Apollo + Instantly Integration
 
-A comprehensive, production-ready machine learning pipeline for predicting email engagement in B2B marketing campaigns. This pipeline incorporates advanced preprocessing techniques, robust feature engineering, and enterprise-grade MLOps infrastructure.
+A comprehensive, production-ready machine learning pipeline for lead scoring using N8N automation, Apollo enrichment, and Instantly data sources. This system implements a three-layer data architecture (Bronze → Silver → Gold) with automated model training and real-time prediction capabilities.
 
-## 🎯 **Unified Pipeline Runner**
+## 🎯 **System Architecture Overview**
 
-**`run_ml_pipeline.py`** is your single entry point for the entire ML pipeline. It orchestrates all components with proper execution order and circumstances.
+### **Three-Layer Data Architecture**
+- **Bronze Layer**: Raw data from Instantly and Apollo APIs
+- **Silver Layer**: Processed ML-ready features  
+- **Gold Layer**: Mature data (1+ month old) for model training
+
+### **Pipeline Components**
+- **N8N Workflows**: Automated data ingestion and enrichment
+- **Data Processing Service**: Bronze → Silver → Gold transformation
+- **ML Model Service**: Training, prediction, and model management
+- **Monitoring Dashboard**: Real-time system health and data quality
+- **EC2 Management**: Cost-optimized instance lifecycle management
 
 ### **Quick Start**
 
 ```bash
-# First-time setup - runs complete pipeline
-python run_ml_pipeline.py --all
+# Start all services
+docker-compose up -d
 
-# Start API service
-python run_ml_pipeline.py --serve
+# Access N8N workflow designer
+http://localhost:5678
 
-# Launch business dashboard
-python run_ml_pipeline.py --dashboard
+# Access monitoring dashboard  
+http://localhost:5002
 
-# Run monitoring
-python run_ml_pipeline.py --monitor
-
-# Use Docker
-python run_ml_pipeline.py --docker start --profile production
+# Check ML service health
+curl http://localhost:5001/health
 ```
 
 ## 🏗️ **Pipeline Architecture**

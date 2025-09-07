@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 class EnhancedMLPipelineRunner:
     """Enhanced ML Pipeline Runner with complete training steps from train_2.py."""
     
-    def __init__(self, config_path="config/main_config.yaml"):
+    def __init__(self, config_path="config/integration_config.yaml"):
         """Initialize the enhanced pipeline runner."""
         self.config = self._load_config(config_path)
         self.setup_directories()

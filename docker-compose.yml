@@ -1,157 +1,222 @@
 version: '3.8'
 
 services:
-  # Main ML API Service
-  ml-api:
-    build:
-      context: .
-      target: production
-    container_name: email-engagement-api
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./data:/app/data
-      - ./config:/app/config
-      - ./models:/app/models
+  # PostgreSQL Database
+  postgres:
+    image: postgres:13
+    container_name: ml_postgres
     environment:
-      - PYTHONPATH=/app/src
-      - ENVIRONMENT=production
+      POSTGRES_DB: ml_lead_scoring
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ml_password_123}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./ml_lead_scoring_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    ports:
+      - "5432:5432"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
-    networks:
-      - ml-network
 
-  # Development API Service
-  ml-api-dev:
+  # N8N Workflow Automation
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: ml_n8n
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-n8n_admin_123}
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=America/New_York
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=ml_lead_scoring
+      - DB_POSTGRESDB_USER=postgres
+      - DB_POSTGRESDB_PASSWORD=${DB_PASSWORD:-ml_password_123}
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n_workflows:/home/node/.n8n/workflows
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Data Processing Service
+  data_processor:
     build:
       context: .
-      target: development
-    container_name: email-engagement-api-dev
-    ports:
-      - "8001:8000"
-    volumes:
-      - ./data:/app/data
-      - ./config:/app/config
-      - ./models:/app/models
-      - ./src:/app/src
+      dockerfile: Dockerfile.data_processor
+    container_name: ml_data_processor
     environment:
-      - PYTHONPATH=/app/src
-      - ENVIRONMENT=development
-    restart: unless-stopped
-    profiles:
-      - dev
-    networks:
-      - ml-network
-
-  # Jupyter Lab for Analysis
-  jupyter:
-    build:
-      context: .
-      target: jupyter
-    container_name: email-engagement-jupyter
-    ports:
-      - "8888:8888"
-    volumes:
-      - ./data:/app/data
-      - ./config:/app/config
-      - ./models:/app/models
-      - ./src:/app/src
-      - ./notebooks:/app/notebooks
-    environment:
-      - PYTHONPATH=/app/src
-      - JUPYTER_ENABLE_LAB=yes
-    restart: unless-stopped
-    profiles:
-      - analysis
-    networks:
-      - ml-network
-
-  # MLflow Tracking Server
-  mlflow:
-    image: python:3.9-slim
-    container_name: mlflow-tracking
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=ml_lead_scoring
+      - DB_USER=postgres
+      - DB_PASSWORD=${DB_PASSWORD:-ml_password_123}
+      - FLASK_ENV=production
     ports:
       - "5000:5000"
     volumes:
-      - ./data:/app/data
-      - ./mlflow:/app/mlflow
-    working_dir: /app
-    command: >
-      bash -c "pip install mlflow &&
-               mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlflow"
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
-    profiles:
-      - mlflow
-    networks:
-      - ml-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Redis for Caching (Optional)
+  # ML Model Service
+  ml_service:
+    build:
+      context: .
+      dockerfile: Dockerfile.ml_service
+    container_name: ml_model_service
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=ml_lead_scoring
+      - DB_USER=postgres
+      - DB_PASSWORD=${DB_PASSWORD:-ml_password_123}
+      - FLASK_ENV=production
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./models:/app/models
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Monitoring Dashboard
+  monitoring:
+    build:
+      context: .
+      dockerfile: Dockerfile.monitoring
+    container_name: ml_monitoring
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=ml_lead_scoring
+      - DB_USER=postgres
+      - DB_PASSWORD=${DB_PASSWORD:-ml_password_123}
+      - SMTP_SERVER=${SMTP_SERVER:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SENDER_EMAIL=${SENDER_EMAIL:-}
+      - SENDER_PASSWORD=${SENDER_PASSWORD:-}
+      - ALERT_RECIPIENTS=${ALERT_RECIPIENTS:-}
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5002/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching and message queue
   redis:
     image: redis:7-alpine
-    container_name: ml-redis
+    container_name: ml_redis
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     restart: unless-stopped
-    profiles:
-      - cache
-    networks:
-      - ml-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # PostgreSQL for Production Database (Optional)
-  postgres:
-    image: postgres:15-alpine
-    container_name: ml-postgres
-    ports:
-      - "5432:5432"
+  # Monitoring with Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ml_grafana
     environment:
-      POSTGRES_DB: ml_pipeline
-      POSTGRES_USER: mluser
-      POSTGRES_PASSWORD: mlpassword
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-grafana_admin_123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-postgresql-datasource
+    ports:
+      - "3000:3000"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - postgres
     restart: unless-stopped
-    profiles:
-      - database
-    networks:
-      - ml-network
 
-  # Nginx Reverse Proxy (Optional)
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ml_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+
+  # API Gateway (Nginx)
   nginx:
     image: nginx:alpine
-    container_name: ml-nginx
+    container_name: ml_nginx
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
     depends_on:
-      - ml-api
+      - n8n
+      - data_processor
+      - ml_service
+      - grafana
     restart: unless-stopped
-    profiles:
-      - production
-    networks:
-      - ml-network
 
 volumes:
-  redis_data:
   postgres_data:
+  n8n_data:
+  redis_data:
+  grafana_data:
+  prometheus_data:
 
 networks:
-  ml-network:
-    driver: bridge
-
-# Default profile runs only the production API
-# Use --profile dev for development environment
-# Use --profile analysis for Jupyter environment
-# Use --profile mlflow for MLflow tracking
-# Use --profile cache for Redis caching
-# Use --profile database for PostgreSQL database
-# Use --profile production for full production stack with Nginx
+  default:
+    name: ml_lead_scoring_network

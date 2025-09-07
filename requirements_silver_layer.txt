@@ -1,0 +1,51 @@
+# Bronze to Silver Layer ETL Pipeline Requirements
+# Production-grade dependencies for data transformation pipeline
+
+# Core Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+
+# Machine Learning & Feature Engineering
+scikit-learn>=1.3.0
+
+# Configuration & Environment
+pyyaml>=6.0
+python-dotenv>=1.0.0
+
+# Scheduling & Task Management
+schedule>=1.2.0
+croniter>=1.4.0
+
+# Logging & Monitoring
+structlog>=23.0.0
+
+# Data Validation & Quality
+great-expectations>=0.17.0  # Optional: Advanced data validation
+pydantic>=2.0.0            # Data validation and settings management
+
+# Performance & Optimization
+numba>=0.57.0              # Optional: JIT compilation for performance
+dask>=2023.0.0             # Optional: Parallel computing
+
+# Development & Testing
+pytest>=7.0.0
+pytest-cov>=4.0.0
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.5.0
+
+# Utilities
+tqdm>=4.65.0               # Progress bars
+click>=8.0.0               # CLI interface
+rich>=13.0.0               # Rich console output
+
+# Database Utilities
+alembic>=1.12.0            # Database migrations
+psycopg2>=2.9.0            # PostgreSQL adapter
+
+# Optional: Advanced Features
+# redis>=4.5.0             # Caching layer
+# boto3>=1.28.0            # AWS integration
+# apache-airflow>=2.7.0    # Workflow orchestration

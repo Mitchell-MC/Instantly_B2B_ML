@@ -1,0 +1,359 @@
+{
+  "name": "Lead Prediction Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "predict-leads",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate input and extract lead data\nconst body = $input.first().json.body;\n\nif (!body || !body.leads || !Array.isArray(body.leads)) {\n  return [{\n    json: {\n      error: 'Invalid input. Expected {\"leads\": [array of lead objects]}',\n      status: 'error'\n    }\n  }];\n}\n\nconst leads = body.leads;\nconst requiredFields = ['email'];\n\n// Validate each lead has required fields\nconst validLeads = [];\nconst invalidLeads = [];\n\nfor (const lead of leads) {\n  const missingFields = requiredFields.filter(field => !lead[field]);\n  \n  if (missingFields.length === 0) {\n    validLeads.push(lead);\n  } else {\n    invalidLeads.push({\n      lead: lead,\n      missing_fields: missingFields\n    });\n  }\n}\n\nreturn [{\n  json: {\n    valid_leads: validLeads,\n    invalid_leads: invalidLeads,\n    total_count: leads.length,\n    valid_count: validLeads.length,\n    batch_id: `pred_${Date.now()}`\n  }\n}];"
+      },
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.valid_count }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "name": "Check Valid Leads",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": "ml_lead_scoring",
+        "table": "api_usage_log",
+        "where": {
+          "conditions": [
+            {
+              "column": "api_source",
+              "operation": "equal",
+              "value": "apollo"
+            },
+            {
+              "column": "request_timestamp",
+              "operation": "isGreaterEqual",
+              "value": "date_trunc('month', CURRENT_DATE)"
+            }
+          ]
+        },
+        "options": {
+          "queryReplacement": "SELECT COALESCE(SUM(credits_used), 0) as monthly_usage FROM ml_lead_scoring.api_usage_log WHERE api_source = 'apollo' AND request_timestamp >= date_trunc('month', CURRENT_DATE)"
+        }
+      },
+      "name": "Check Apollo Credits",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check Apollo credit budget for predictions\nconst inputData = $input.first().json;\nconst creditUsage = $input.last().json;\n\nconst monthlyLimit = 20000; // 20K credits per month\nconst currentUsage = creditUsage.monthly_usage || 0;\nconst remainingCredits = monthlyLimit - currentUsage;\nconst requiredCredits = inputData.valid_count;\n\n// Reserve 2000 credits for training pipeline\nconst availableForPredictions = remainingCredits - 2000;\n\nif (availableForPredictions < requiredCredits) {\n  return [{\n    json: {\n      error: `Insufficient Apollo credits. Need ${requiredCredits}, available ${availableForPredictions}`,\n      status: 'error',\n      remaining_credits: remainingCredits,\n      required_credits: requiredCredits\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...inputData,\n    apollo_budget_ok: true,\n    remaining_credits: remainingCredits,\n    credits_to_use: requiredCredits\n  }\n}];"
+      },
+      "name": "Apollo Budget Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.apollo_budget_ok }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Budget OK Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split leads for individual Apollo enrichment\nconst leads = $input.first().json.valid_leads || [];\n\nreturn leads.map(lead => ({ json: lead }));"
+      },
+      "name": "Split Leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1560, 120]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "apolloApi",
+        "url": "https://api.apollo.io/v1/people/search",
+        "requestMethod": "POST",
+        "jsonParameters": true,
+        "bodyParametersJson": "={\n  \"q_person_emails\": [\"{{ $json.email }}\"],\n  \"per_page\": 1,\n  \"page\": 1\n}",
+        "options": {
+          "timeout": 30000\n        }\n      },\n      \"name\": \"Apollo Enrichment\",\n      \"type\": \"n8n-nodes-base.httpRequest\",\n      \"typeVersion\": 3,\n      \"position\": [1780, 120]\n    },\n    {\n      \"parameters\": {\n        \"jsCode\": \"// Process Apollo response and create feature vector\\nconst originalLead = $input.first().json;\\nconst apolloResponse = $input.last().json;\\n\\nlet enrichedLead = {\\n  ...originalLead,\\n  apollo_enriched: false\\n};\\n\\nif (apolloResponse && apolloResponse.people && apolloResponse.people.length > 0) {\\n  const person = apolloResponse.people[0];\\n  const organization = person.organization;\\n  \\n  enrichedLead.apollo_enriched = true;\\n  \\n  if (organization) {\\n    enrichedLead.company_size = organization.estimated_num_employees_bucket;\\n    enrichedLead.company_revenue = organization.estimated_annual_revenue;\\n    enrichedLead.company_industry = organization.industry;\\n    enrichedLead.company_location = `${organization.city}, ${organization.state}, ${organization.country}`;\\n    enrichedLead.employee_count = organization.estimated_num_employees;\\n    enrichedLead.company_description = organization.description;\\n    enrichedLead.technologies = organization.technologies || [];\\n  }\\n  \\n  enrichedLead.linkedin_url = person.linkedin_url;\\n  enrichedLead.twitter_url = person.twitter_url;\\n}\\n\\n// Create feature vector for ML prediction\\nconst featureVector = {\\n  // Default engagement features (new lead = 0)\\n  open_rate: 0,\\n  click_rate: 0,\\n  reply_rate: 0,\\n  bounce_rate: 0,\\n  days_since_activity: 0,\\n  lead_age_days: 0,\\n  engagement_score: 0,\\n  \\n  // Company features from Apollo\\n  company_size_encoded: encodeCompanySize(enrichedLead.company_size, enrichedLead.employee_count),\\n  revenue_encoded: encodeRevenue(enrichedLead.company_revenue),\\n  industry_encoded: encodeIndustry(enrichedLead.company_industry),\\n  has_tech_stack: enrichedLead.technologies ? (enrichedLead.technologies.length > 0 ? 1 : 0) : 0,\\n  social_presence_score: calculateSocialPresence(enrichedLead)\\n};\\n\\nfunction encodeCompanySize(sizeStr, employeeCount) {\\n  if (employeeCount) {\\n    if (employeeCount < 10) return 1;\\n    if (employeeCount < 50) return 2;\\n    if (employeeCount < 250) return 3;\\n    if (employeeCount < 1000) return 4;\\n    return 5;\\n  }\\n  \\n  if (sizeStr) {\\n    const size = sizeStr.toLowerCase();\\n    if (size.includes('startup') || size.includes('1-10')) return 1;\\n    if (size.includes('small') || size.includes('11-50')) return 2;\\n    if (size.includes('medium') || size.includes('51-250')) return 3;\\n    if (size.includes('large') || size.includes('251-1000')) return 4;\\n    if (size.includes('enterprise') || size.includes('1000+')) return 5;\\n  }\\n  \\n  return 0;\\n}\\n\\nfunction encodeRevenue(revenueStr) {\\n  if (!revenueStr) return 0;\\n  \\n  const revenue = revenueStr.toLowerCase();\\n  if (revenue.includes('million')) {\\n    const match = revenue.match(/\\\\d+/);\\n    if (match) {\\n      const mil = parseInt(match[0]);\\n      if (mil < 1) return 1;\\n      if (mil < 10) return 2;\\n      if (mil < 100) return 3;\\n      return 4;\\n    }\\n  }\\n  \\n  return 0;\\n}\\n\\nfunction encodeIndustry(industryStr) {\\n  if (!industryStr) return 0;\\n  \\n  const industry = industryStr.toLowerCase();\\n  if (industry.includes('technology') || industry.includes('software') || industry.includes('tech')) return 1;\\n  if (industry.includes('finance') || industry.includes('financial')) return 2;\\n  if (industry.includes('healthcare') || industry.includes('medical')) return 3;\\n  if (industry.includes('manufacturing') || industry.includes('industrial')) return 4;\\n  if (industry.includes('consulting') || industry.includes('services')) return 5;\\n  if (industry.includes('retail') || industry.includes('commerce')) return 6;\\n  \\n  return 7;\\n}\\n\\nfunction calculateSocialPresence(lead) {\\n  let score = 0;\\n  if (lead.linkedin_url) score += 0.5;\\n  if (lead.twitter_url) score += 0.3;\\n  if (lead.technologies && lead.technologies.length > 0) score += 0.2;\\n  \\n  return Math.min(score, 1.0);\\n}\\n\\nenrichedLead.feature_vector = JSON.stringify(featureVector);\\n\\nreturn [{ json: enrichedLead }];\"\n      },\n      \"name\": \"Create Feature Vector\",\n      \"type\": \"n8n-nodes-base.code\",\n      \"typeVersion\": 1,\n      \"position\": [2000, 120]\n    },\n    {\n      \"parameters\": {\n        \"amount\": 1,\n        \"unit\": \"seconds\"\n      },\n      \"name\": \"Rate Limit Delay\",\n      \"type\": \"n8n-nodes-base.wait\",\n      \"typeVersion\": 1,\n      \"position\": [1780, 280]\n    },\n    {\n      \"parameters\": {\n        \"authentication\": \"predefinedCredentialType\",\n        \"nodeCredentialType\": \"httpBasicAuth\",\n        \"requestMethod\": \"POST\",\n        \"url\": \"http://ml_service:5001/api/predict\",\n        \"jsonParameters\": true,\n        \"bodyParametersJson\": \"={{ { \\\"leads_data\\\": $input.all().map(item => item.json) } }}\",\n        \"options\": {}\n      },\n      \"name\": \"Get ML Predictions\",\n      \"type\": \"n8n-nodes-base.httpRequest\",\n      \"typeVersion\": 3,\n      \"position\": [2220, 120]\n    },\n    {\n      \"parameters\": {\n        \"jsCode\": \"// Format final response with predictions\\nconst inputData = $input.first().json;\\nconst predictions = $input.last().json;\\n\\nconst response = {\\n  status: 'success',\\n  batch_id: inputData.batch_id,\\n  total_leads: inputData.total_count,\\n  processed_leads: inputData.valid_count,\\n  apollo_credits_used: inputData.credits_to_use,\\n  predictions: predictions.predictions || [],\\n  invalid_leads: inputData.invalid_leads || [],\\n  timestamp: new Date().toISOString()\\n};\\n\\nreturn [{ json: response }];\"\n      },\n      \"name\": \"Format Response\",\n      \"type\": \"n8n-nodes-base.code\",\n      \"typeVersion\": 1,\n      \"position\": [2440, 120]\n    },\n    {\n      \"parameters\": {\n        \"respondWith\": \"json\",\n        \"responseBody\": \"={{ $json }}\",\n        \"options\": {}\n      },\n      \"name\": \"Return Response\",\n      \"type\": \"n8n-nodes-base.respondToWebhook\",\n      \"typeVersion\": 1,\n      \"position\": [2660, 120]\n    },\n    {\n      \"parameters\": {\n        \"jsCode\": \"// Error response for insufficient credits\\nconst errorData = $input.first().json;\\n\\nreturn [{ \\n  json: {\\n    status: 'error',\\n    error: errorData.error,\\n    remaining_credits: errorData.remaining_credits,\\n    required_credits: errorData.required_credits,\\n    timestamp: new Date().toISOString()\\n  }\\n}];\"\n      },\n      \"name\": \"Format Error Response\",\n      \"type\": \"n8n-nodes-base.code\",\n      \"typeVersion\": 1,\n      \"position\": [1560, 280]\n    },\n    {\n      \"parameters\": {\n        \"respondWith\": \"json\",\n        \"responseBody\": \"={{ $json }}\",\n        \"responseCode\": 429,\n        \"options\": {}\n      },\n      \"name\": \"Return Error\",\n      \"type\": \"n8n-nodes-base.respondToWebhook\",\n      \"typeVersion\": 1,\n      \"position\": [1780, 280]\n    }\n  ],\n  \"connections\": {\n    \"Webhook Trigger\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Validate Input\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Validate Input\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Check Valid Leads\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Check Valid Leads\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Check Apollo Credits\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ],\n        [\n          {\n            \"node\": \"Format Error Response\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Check Apollo Credits\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Apollo Budget Check\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Apollo Budget Check\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Budget OK Check\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Budget OK Check\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Split Leads\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ],\n        [\n          {\n            \"node\": \"Format Error Response\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Split Leads\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Apollo Enrichment\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Apollo Enrichment\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Create Feature Vector\",\n            \"type\": \"main\",\n            \"index\": 0\n          },\n          {\n            \"node\": \"Rate Limit Delay\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Create Feature Vector\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Get ML Predictions\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Get ML Predictions\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Format Response\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Format Response\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Return Response\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Format Error Response\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Return Error\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    }\n  },\n  \"pinData\": {},\n  \"settings\": {\n    \"executionOrder\": \"v1\"\n  },\n  \"staticData\": null,\n  \"tags\": [],\n  \"triggerCount\": 1,\n  \"updatedAt\": \"2024-01-20T10:00:00.000Z\",\n  \"versionId\": \"1\"\n}"
+        }
+      },
+      "name": "Apollo Enrichment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1780, 120]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process Apollo response and create feature vector\nconst originalLead = $input.first().json;\nconst apolloResponse = $input.last().json;\n\nlet enrichedLead = {\n  ...originalLead,\n  apollo_enriched: false\n};\n\nif (apolloResponse && apolloResponse.people && apolloResponse.people.length > 0) {\n  const person = apolloResponse.people[0];\n  const organization = person.organization;\n  \n  enrichedLead.apollo_enriched = true;\n  \n  if (organization) {\n    enrichedLead.company_size = organization.estimated_num_employees_bucket;\n    enrichedLead.company_revenue = organization.estimated_annual_revenue;\n    enrichedLead.company_industry = organization.industry;\n    enrichedLead.company_location = `${organization.city}, ${organization.state}, ${organization.country}`;\n    enrichedLead.employee_count = organization.estimated_num_employees;\n    enrichedLead.company_description = organization.description;\n    enrichedLead.technologies = organization.technologies || [];\n  }\n  \n  enrichedLead.linkedin_url = person.linkedin_url;\n  enrichedLead.twitter_url = person.twitter_url;\n}\n\n// Create feature vector for ML prediction\nconst featureVector = {\n  // Default engagement features (new lead = 0)\n  open_rate: 0,\n  click_rate: 0,\n  reply_rate: 0,\n  bounce_rate: 0,\n  days_since_activity: 0,\n  lead_age_days: 0,\n  engagement_score: 0,\n  \n  // Company features from Apollo\n  company_size_encoded: encodeCompanySize(enrichedLead.company_size, enrichedLead.employee_count),\n  revenue_encoded: encodeRevenue(enrichedLead.company_revenue),\n  industry_encoded: encodeIndustry(enrichedLead.company_industry),\n  has_tech_stack: enrichedLead.technologies ? (enrichedLead.technologies.length > 0 ? 1 : 0) : 0,\n  social_presence_score: calculateSocialPresence(enrichedLead)\n};\n\nfunction encodeCompanySize(sizeStr, employeeCount) {\n  if (employeeCount) {\n    if (employeeCount < 10) return 1;\n    if (employeeCount < 50) return 2;\n    if (employeeCount < 250) return 3;\n    if (employeeCount < 1000) return 4;\n    return 5;\n  }\n  \n  if (sizeStr) {\n    const size = sizeStr.toLowerCase();\n    if (size.includes('startup') || size.includes('1-10')) return 1;\n    if (size.includes('small') || size.includes('11-50')) return 2;\n    if (size.includes('medium') || size.includes('51-250')) return 3;\n    if (size.includes('large') || size.includes('251-1000')) return 4;\n    if (size.includes('enterprise') || size.includes('1000+')) return 5;\n  }\n  \n  return 0;\n}\n\nfunction encodeRevenue(revenueStr) {\n  if (!revenueStr) return 0;\n  \n  const revenue = revenueStr.toLowerCase();\n  if (revenue.includes('million')) {\n    const match = revenue.match(/\\d+/);\n    if (match) {\n      const mil = parseInt(match[0]);\n      if (mil < 1) return 1;\n      if (mil < 10) return 2;\n      if (mil < 100) return 3;\n      return 4;\n    }\n  }\n  \n  return 0;\n}\n\nfunction encodeIndustry(industryStr) {\n  if (!industryStr) return 0;\n  \n  const industry = industryStr.toLowerCase();\n  if (industry.includes('technology') || industry.includes('software') || industry.includes('tech')) return 1;\n  if (industry.includes('finance') || industry.includes('financial')) return 2;\n  if (industry.includes('healthcare') || industry.includes('medical')) return 3;\n  if (industry.includes('manufacturing') || industry.includes('industrial')) return 4;\n  if (industry.includes('consulting') || industry.includes('services')) return 5;\n  if (industry.includes('retail') || industry.includes('commerce')) return 6;\n  \n  return 7;\n}\n\nfunction calculateSocialPresence(lead) {\n  let score = 0;\n  if (lead.linkedin_url) score += 0.5;\n  if (lead.twitter_url) score += 0.3;\n  if (lead.technologies && lead.technologies.length > 0) score += 0.2;\n  \n  return Math.min(score, 1.0);\n}\n\nenrichedLead.feature_vector = JSON.stringify(featureVector);\n\nreturn [{ json: enrichedLead }];"
+      },
+      "name": "Create Feature Vector",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [2000, 120]
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "seconds"
+      },
+      "name": "Rate Limit Delay",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1780, 280]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpBasicAuth",
+        "requestMethod": "POST",
+        "url": "http://ml_service:5001/api/predict",
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ { \"leads_data\": $input.all().map(item => item.json) } }}",
+        "options": {}
+      },
+      "name": "Get ML Predictions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [2220, 120]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format final response with predictions\nconst inputData = $input.first().json;\nconst predictions = $input.last().json;\n\nconst response = {\n  status: 'success',\n  batch_id: inputData.batch_id,\n  total_leads: inputData.total_count,\n  processed_leads: inputData.valid_count,\n  apollo_credits_used: inputData.credits_to_use,\n  predictions: predictions.predictions || [],\n  invalid_leads: inputData.invalid_leads || [],\n  timestamp: new Date().toISOString()\n};\n\nreturn [{ json: response }];"
+      },
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [2440, 120]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "name": "Return Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2660, 120]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error response for insufficient credits\nconst errorData = $input.first().json;\n\nreturn [{ \n  json: {\n    status: 'error',\n    error: errorData.error,\n    remaining_credits: errorData.remaining_credits,\n    required_credits: errorData.required_credits,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "name": "Format Error Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1560, 280]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "responseCode": 429,
+        "options": {}
+      },
+      "name": "Return Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1780, 280]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Check Valid Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Valid Leads": {
+      "main": [
+        [
+          {
+            "node": "Check Apollo Credits",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Apollo Credits": {
+      "main": [
+        [
+          {
+            "node": "Apollo Budget Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apollo Budget Check": {
+      "main": [
+        [
+          {
+            "node": "Budget OK Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Budget OK Check": {
+      "main": [
+        [
+          {
+            "node": "Split Leads",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Leads": {
+      "main": [
+        [
+          {
+            "node": "Apollo Enrichment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apollo Enrichment": {
+      "main": [
+        [
+          {
+            "node": "Create Feature Vector",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rate Limit Delay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Feature Vector": {
+      "main": [
+        [
+          {
+            "node": "Get ML Predictions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get ML Predictions": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Return Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Response": {
+      "main": [
+        [
+          {
+            "node": "Return Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-20T10:00:00.000Z",
+  "versionId": "1"
+}

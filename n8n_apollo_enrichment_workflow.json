@@ -1,0 +1,348 @@
+{
+  "name": "Apollo Lead Enrichment Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "name": "Every 6 Hours Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": "ml_lead_scoring",
+        "table": "bronze_instantly_leads",
+        "where": {
+          "conditions": [
+            {
+              "column": "lead_id",
+              "operation": "notIn",
+              "value": "(SELECT DISTINCT lead_id FROM ml_lead_scoring.bronze_apollo_enrichment WHERE lead_id IS NOT NULL)"
+            },
+            {
+              "column": "created_date",
+              "operation": "isGreaterEqual",
+              "value": "NOW() - INTERVAL '7 days'"
+            }
+          ]
+        },
+        "options": {
+          "queryReplacement": "SELECT * FROM ml_lead_scoring.bronze_instantly_leads WHERE lead_id NOT IN (SELECT DISTINCT lead_id FROM ml_lead_scoring.bronze_apollo_enrichment WHERE lead_id IS NOT NULL) AND created_date >= NOW() - INTERVAL '7 days' LIMIT 50"
+        }
+      },
+      "name": "Get New Leads for Enrichment",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": "ml_lead_scoring", 
+        "table": "api_usage_log",
+        "where": {
+          "conditions": [
+            {
+              "column": "api_source",
+              "operation": "equal",
+              "value": "apollo"
+            },
+            {
+              "column": "request_timestamp",
+              "operation": "isGreaterEqual",
+              "value": "date_trunc('month', CURRENT_DATE)"
+            }
+          ]
+        },
+        "options": {
+          "queryReplacement": "SELECT COALESCE(SUM(credits_used), 0) as monthly_usage FROM ml_lead_scoring.api_usage_log WHERE api_source = 'apollo' AND request_timestamp >= date_trunc('month', CURRENT_DATE)"
+        }
+      },
+      "name": "Check Apollo Credit Usage",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if we have budget for Apollo API calls\nconst newLeads = $input.first().json;\nconst creditUsage = $input.last().json;\n\nconst monthlyLimit = 20000; // 20K credits per month\nconst currentUsage = creditUsage.monthly_usage || 0;\nconst remainingCredits = monthlyLimit - currentUsage;\nconst leadsCount = Array.isArray(newLeads) ? newLeads.length : (newLeads ? 1 : 0);\n\nif (remainingCredits < leadsCount) {\n  // Not enough credits, limit the batch\n  const allowedLeads = Math.max(0, remainingCredits);\n  const limitedLeads = Array.isArray(newLeads) ? newLeads.slice(0, allowedLeads) : [];\n  \n  return [{\n    json: {\n      leads: limitedLeads,\n      warning: `Credit limit reached. Processing only ${allowedLeads} of ${leadsCount} leads.`,\n      remaining_credits: remainingCredits\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    leads: Array.isArray(newLeads) ? newLeads : (newLeads ? [newLeads] : []),\n    remaining_credits: remainingCredits,\n    batch_size: leadsCount\n  }\n}];"
+      },
+      "name": "Credit Budget Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.batch_size }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "name": "Check if Leads Available",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split leads into individual items for Apollo enrichment\nconst input = $input.first().json;\nconst leads = input.leads || [];\n\nreturn leads.map(lead => ({ json: lead }));"
+      },
+      "name": "Split Leads for Processing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "apolloApi",
+        "url": "https://api.apollo.io/v1/people/search",
+        "requestMethod": "POST",
+        "jsonParameters": true,
+        "bodyParametersJson": "={\n  \"q_person_emails\": [\"{{ $json.email }}\"],\n  \"per_page\": 1,\n  \"page\": 1\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "name": "Apollo Person Lookup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1560, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process Apollo response and extract enrichment data\nconst lead = $input.first().json;\nconst apolloResponse = $input.last().json;\n\nlet enrichmentData = {\n  lead_id: lead.lead_id,\n  company_size: null,\n  company_revenue: null,\n  company_industry: null,\n  company_location: null,\n  employee_count: null,\n  technologies: {},\n  social_media_profiles: {},\n  company_description: null,\n  funding_info: {},\n  raw_apollo_data: JSON.stringify(apolloResponse),\n  apollo_credits_used: 1\n};\n\nif (apolloResponse && apolloResponse.people && apolloResponse.people.length > 0) {\n  const person = apolloResponse.people[0];\n  const organization = person.organization;\n  \n  if (organization) {\n    enrichmentData.company_size = organization.estimated_num_employees_bucket;\n    enrichmentData.company_revenue = organization.estimated_annual_revenue;\n    enrichmentData.company_industry = organization.industry;\n    enrichmentData.company_location = `${organization.city}, ${organization.state}, ${organization.country}`;\n    enrichmentData.employee_count = organization.estimated_num_employees;\n    enrichmentData.company_description = organization.description;\n    enrichmentData.technologies = JSON.stringify(organization.technologies || []);\n    enrichmentData.funding_info = JSON.stringify(organization.funding || {});\n  }\n  \n  if (person.linkedin_url) {\n    enrichmentData.social_media_profiles = JSON.stringify({\n      linkedin: person.linkedin_url,\n      twitter: person.twitter_url\n    });\n  }\n}\n\nreturn [{ json: enrichmentData }];"
+      },
+      "name": "Process Apollo Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1780, 200]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "ml_lead_scoring",
+        "table": "bronze_apollo_enrichment",
+        "columns": "lead_id, company_size, company_revenue, company_industry, company_location, employee_count, technologies, social_media_profiles, company_description, funding_info, raw_apollo_data, apollo_credits_used",
+        "additionalFields": {
+          "mode": "upsert",\n          \"upsertKeyColumns\": \"lead_id\"\n        }\n      },\n      \"name\": \"Save Apollo Enrichment\",\n      \"type\": \"n8n-nodes-base.postgres\",\n      \"typeVersion\": 2,\n      \"position\": [2000, 200]\n    },\n    {\n      \"parameters\": {\n        \"operation\": \"insert\",\n        \"schema\": \"ml_lead_scoring\",\n        \"table\": \"api_usage_log\",\n        \"columns\": \"api_source, endpoint, credits_used, monthly_total, remaining_credits\",\n        \"additionalFields\": {}\n      },\n      \"name\": \"Log API Usage\",\n      \"type\": \"n8n-nodes-base.postgres\",\n      \"typeVersion\": 2,\n      \"position\": [2220, 200]\n    },\n    {\n      \"parameters\": {\n        \"jsCode\": \"// Log API usage for tracking\\nconst enrichmentData = $input.first().json;\\nconst remaining = $input.all()[0].json.remaining_credits || 0;\\n\\nreturn [{\\n  json: {\\n    api_source: 'apollo',\\n    endpoint: '/v1/people/search',\\n    credits_used: 1,\\n    monthly_total: 20000 - remaining + 1,\\n    remaining_credits: remaining - 1\\n  }\\n}];\"\n      },\n      \"name\": \"Prepare Usage Log\",\n      \"type\": \"n8n-nodes-base.code\",\n      \"typeVersion\": 1,\n      \"position\": [2000, 350]\n    },\n    {\n      \"parameters\": {\n        \"amount\": 1,\n        \"unit\": \"seconds\"\n      },\n      \"name\": \"Rate Limit Delay\",\n      \"type\": \"n8n-nodes-base.wait\",\n      \"typeVersion\": 1,\n      \"position\": [1780, 350]\n    },\n    {\n      \"parameters\": {\n        \"subject\": \"Apollo Enrichment Complete\",\n        \"message\": \"=Apollo enrichment completed for batch.\\n\\nLeads processed: {{ $json.batch_size }}\\nRemaining credits: {{ $json.remaining_credits }}\\nTimestamp: {{ new Date().toISOString() }}\",\n        \"options\": {}\n      },\n      \"name\": \"Send Completion Notification\",\n      \"type\": \"n8n-nodes-base.emailSend\",\n      \"typeVersion\": 2,\n      \"position\": [1340, 500]\n    },\n    {\n      \"parameters\": {\n        \"jsCode\": \"// Error handling for Apollo API failures\\nconst error = $input.all()[0];\\nconsole.error('Apollo enrichment error:', error);\\n\\nreturn [{\\n  json: {\\n    error: true,\\n    message: error.message || 'Unknown error during Apollo enrichment',\\n    timestamp: new Date().toISOString(),\\n    pipeline: 'apollo_enrichment'\\n  }\\n}];\"\n      },\n      \"name\": \"Error Handler\",\n      \"type\": \"n8n-nodes-base.code\",\n      \"typeVersion\": 1,\n      \"position\": [1560, 500]\n    }\n  ],\n  \"connections\": {\n    \"Every 6 Hours Trigger\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Get New Leads for Enrichment\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Get New Leads for Enrichment\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Check Apollo Credit Usage\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Check Apollo Credit Usage\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Credit Budget Check\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Credit Budget Check\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Check if Leads Available\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Check if Leads Available\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Split Leads for Processing\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ],\n        [\n          {\n            \"node\": \"Send Completion Notification\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Split Leads for Processing\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Apollo Person Lookup\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Apollo Person Lookup\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Process Apollo Data\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Process Apollo Data\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Save Apollo Enrichment\",\n            \"type\": \"main\",\n            \"index\": 0\n          },\n          {\n            \"node\": \"Rate Limit Delay\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Save Apollo Enrichment\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Prepare Usage Log\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Prepare Usage Log\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Log API Usage\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    }\n  },\n  \"pinData\": {},\n  \"settings\": {\n    \"executionOrder\": \"v1\"\n  },\n  \"staticData\": null,\n  \"tags\": [],\n  \"triggerCount\": 1,\n  \"updatedAt\": \"2024-01-20T10:00:00.000Z\",\n  \"versionId\": \"1\"\n}"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "ml_lead_scoring",
+        "table": "bronze_apollo_enrichment",
+        "columns": "lead_id, company_size, company_revenue, company_industry, company_location, employee_count, technologies, social_media_profiles, company_description, funding_info, raw_apollo_data, apollo_credits_used",
+        "additionalFields": {
+          "mode": "upsert",
+          "upsertKeyColumns": "lead_id"
+        }
+      },
+      "name": "Save Apollo Enrichment",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2000, 200]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "ml_lead_scoring",
+        "table": "api_usage_log",
+        "columns": "api_source, endpoint, credits_used, monthly_total, remaining_credits",
+        "additionalFields": {}
+      },
+      "name": "Log API Usage",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2220, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log API usage for tracking\nconst enrichmentData = $input.first().json;\nconst remaining = $input.all()[0].json.remaining_credits || 0;\n\nreturn [{\n  json: {\n    api_source: 'apollo',\n    endpoint: '/v1/people/search',\n    credits_used: 1,\n    monthly_total: 20000 - remaining + 1,\n    remaining_credits: remaining - 1\n  }\n}];"
+      },
+      "name": "Prepare Usage Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [2000, 350]
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "seconds"
+      },
+      "name": "Rate Limit Delay",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1780, 350]
+    },
+    {
+      "parameters": {
+        "subject": "Apollo Enrichment Complete",
+        "message": "=Apollo enrichment completed for batch.\n\nLeads processed: {{ $json.batch_size }}\nRemaining credits: {{ $json.remaining_credits }}\nTimestamp: {{ new Date().toISOString() }}",
+        "options": {}
+      },
+      "name": "Send Completion Notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1340, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error handling for Apollo API failures\nconst error = $input.all()[0];\nconsole.error('Apollo enrichment error:', error);\n\nreturn [{\n  json: {\n    error: true,\n    message: error.message || 'Unknown error during Apollo enrichment',\n    timestamp: new Date().toISOString(),\n    pipeline: 'apollo_enrichment'\n  }\n}];"
+      },
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1560, 500]
+    }
+  ],
+  "connections": {
+    "Every 6 Hours Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get New Leads for Enrichment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get New Leads for Enrichment": {
+      "main": [
+        [
+          {
+            "node": "Check Apollo Credit Usage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Apollo Credit Usage": {
+      "main": [
+        [
+          {
+            "node": "Credit Budget Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Credit Budget Check": {
+      "main": [
+        [
+          {
+            "node": "Check if Leads Available",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Leads Available": {
+      "main": [
+        [
+          {
+            "node": "Split Leads for Processing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Completion Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Leads for Processing": {
+      "main": [
+        [
+          {
+            "node": "Apollo Person Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apollo Person Lookup": {
+      "main": [
+        [
+          {
+            "node": "Process Apollo Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Apollo Data": {
+      "main": [
+        [
+          {
+            "node": "Save Apollo Enrichment",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Rate Limit Delay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Apollo Enrichment": {
+      "main": [
+        [
+          {
+            "node": "Prepare Usage Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Usage Log": {
+      "main": [
+        [
+          {
+            "node": "Log API Usage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-20T10:00:00.000Z",
+  "versionId": "1"
+}

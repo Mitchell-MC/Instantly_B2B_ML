@@ -1,0 +1,221 @@
+2025-09-03 10:52:51,177 - ERROR - ❌ No emails provided. Use --emails or --file parameter
+2025-09-03 10:57:46,730 - INFO - ✅ Directory structure verified
+2025-09-03 10:57:46,730 - ERROR - ❌ Error reading email file: DB_PASSWORD environment variable is required
+2025-09-03 10:59:58,074 - INFO - ✅ Directory structure verified
+2025-09-03 10:59:58,074 - INFO - ✅ Credentials loaded from environment
+2025-09-03 11:00:00,135 - ERROR - ❌ Database connection failed: connection to server at "127.0.0.1", port 5431 failed: Connection refused (0x0000274D/10061)
+	Is the server running on that host and accepting TCP/IP connections?
+
+2025-09-03 11:00:00,137 - ERROR - ❌ Error reading email file: connection to server at "127.0.0.1", port 5431 failed: Connection refused (0x0000274D/10061)
+	Is the server running on that host and accepting TCP/IP connections?
+
+2025-09-03 11:01:14,660 - INFO - ✅ Directory structure verified
+2025-09-03 11:01:14,660 - INFO - ✅ Credentials loaded from environment
+2025-09-03 11:01:15,031 - INFO - ✅ Database connection established
+2025-09-03 11:01:15,133 - WARNING - ⚠️ Table ml_lead_scoring.bronze_instantly_leads does not exist
+2025-09-03 11:01:15,181 - WARNING - ⚠️ Table ml_lead_scoring.bronze_apollo_enrichment does not exist
+2025-09-03 11:01:15,228 - WARNING - ⚠️ Table ml_lead_scoring.silver_enriched_leads does not exist
+2025-09-03 11:01:15,228 - INFO - ✅ Database schema verification complete
+2025-09-03 11:01:15,235 - INFO - 📊 CSV file loaded with 10 rows and columns: ['email', 'from_email', 'subject', 'campaign_id', 'message_id', 'timestamp_created', 'timestamp_email', 'lead_email', 'thread_id', 'is_unread', 'is_focused', 'ue_type', 'step', 'organization_id', 'eaccount']
+2025-09-03 11:01:15,236 - INFO - 📧 Using email column: 'email'
+2025-09-03 11:01:15,238 - INFO - ✅ Extracted 10 unique valid emails from CSV
+2025-09-03 11:01:15,239 - INFO - ✅ Database connection closed
+2025-09-03 11:01:15,239 - INFO - ✅ Directory structure verified
+2025-09-03 11:01:15,239 - INFO - ✅ Credentials loaded from environment
+2025-09-03 11:01:15,540 - INFO - ✅ Database connection established
+2025-09-03 11:01:15,639 - WARNING - ⚠️ Table ml_lead_scoring.bronze_instantly_leads does not exist
+2025-09-03 11:01:15,686 - WARNING - ⚠️ Table ml_lead_scoring.bronze_apollo_enrichment does not exist
+2025-09-03 11:01:15,734 - WARNING - ⚠️ Table ml_lead_scoring.silver_enriched_leads does not exist
+2025-09-03 11:01:15,734 - INFO - ✅ Database schema verification complete
+2025-09-03 11:01:15,734 - INFO - 🚀 Starting email enrichment pipeline for 10 emails
+2025-09-03 11:01:15,734 - INFO - 📧 Processing email 1/10: marcjacobs@ntop.com
+2025-09-03 11:01:16,735 - INFO - 🚀 Processing email: marcjacobs@ntop.com
+2025-09-03 11:01:16,736 - INFO - Fetching Instantly data for: marcjacobs@ntop.com
+2025-09-03 11:01:17,244 - ERROR - ❌ Instantly API error for marcjacobs@ntop.com: 401 - {"error":"ERR_AUTH_FAILED"}
+2025-09-03 11:01:17,247 - INFO - ✅ Completed processing marcjacobs@ntop.com: no_data
+2025-09-03 11:01:17,248 - INFO - 📧 Processing email 2/10: paulr@fsmglobal.com
+2025-09-03 11:01:18,248 - INFO - 🚀 Processing email: paulr@fsmglobal.com
+2025-09-03 11:01:18,249 - INFO - Fetching Instantly data for: paulr@fsmglobal.com
+2025-09-03 11:01:19,651 - ERROR - ❌ Instantly API error for paulr@fsmglobal.com: 401 - {"error":"ERR_AUTH_FAILED"}
+2025-09-03 11:01:19,653 - INFO - ✅ Completed processing paulr@fsmglobal.com: no_data
+2025-09-03 11:01:19,654 - INFO - 📧 Processing email 3/10: angelo.marcotullio@cisecurity.org
+2025-09-03 11:01:20,654 - INFO - 🚀 Processing email: angelo.marcotullio@cisecurity.org
+2025-09-03 11:01:20,655 - INFO - Fetching Instantly data for: angelo.marcotullio@cisecurity.org
+2025-09-03 11:01:21,070 - ERROR - ❌ Instantly API error for angelo.marcotullio@cisecurity.org: 401 - {"error":"ERR_AUTH_FAILED"}
+2025-09-03 11:01:21,071 - INFO - ✅ Completed processing angelo.marcotullio@cisecurity.org: no_data
+2025-09-03 11:01:21,071 - INFO - 📧 Processing email 4/10: jfuccillo@nectarcorp.com
+2025-09-03 11:01:22,072 - INFO - 🚀 Processing email: jfuccillo@nectarcorp.com
+2025-09-03 11:01:22,072 - INFO - Fetching Instantly data for: jfuccillo@nectarcorp.com
+2025-09-03 11:01:22,454 - ERROR - ❌ Instantly API error for jfuccillo@nectarcorp.com: 401 - {"error":"ERR_AUTH_FAILED"}
+2025-09-03 11:01:22,457 - INFO - ✅ Completed processing jfuccillo@nectarcorp.com: no_data
+2025-09-03 11:01:22,457 - INFO - 📧 Processing email 5/10: maria@daydream.ing
+2025-09-03 11:01:23,458 - INFO - 🚀 Processing email: maria@daydream.ing
+2025-09-03 11:01:23,458 - INFO - Fetching Instantly data for: maria@daydream.ing
+2025-09-03 11:01:24,118 - ERROR - ❌ Instantly API error for maria@daydream.ing: 401 - {"error":"ERR_AUTH_FAILED"}
+2025-09-03 11:01:24,121 - INFO - ✅ Completed processing maria@daydream.ing: no_data
+2025-09-03 11:01:24,121 - INFO - 📧 Processing email 6/10: jtoohey@tunein.com
+2025-09-03 11:01:25,122 - INFO - 🚀 Processing email: jtoohey@tunein.com
+2025-09-03 11:01:25,122 - INFO - Fetching Instantly data for: jtoohey@tunein.com
+2025-09-03 11:01:25,847 - ERROR - ❌ Instantly API error for jtoohey@tunein.com: 401 - {"error":"ERR_AUTH_FAILED"}
+2025-09-03 11:01:25,850 - INFO - ✅ Completed processing jtoohey@tunein.com: no_data
+2025-09-03 11:01:25,850 - INFO - 📧 Processing email 7/10: noah@beehiiv.com
+2025-09-03 11:01:26,851 - INFO - 🚀 Processing email: noah@beehiiv.com
+2025-09-03 11:01:26,851 - INFO - Fetching Instantly data for: noah@beehiiv.com
+2025-09-03 11:01:27,277 - ERROR - ❌ Instantly API error for noah@beehiiv.com: 401 - {"error":"ERR_AUTH_FAILED"}
+2025-09-03 11:01:27,279 - INFO - ✅ Completed processing noah@beehiiv.com: no_data
+2025-09-03 11:01:27,279 - INFO - 📧 Processing email 8/10: sung.choi@grata.com
+2025-09-03 11:01:28,280 - INFO - 🚀 Processing email: sung.choi@grata.com
+2025-09-03 11:01:28,280 - INFO - Fetching Instantly data for: sung.choi@grata.com
+2025-09-03 11:01:28,669 - ERROR - ❌ Instantly API error for sung.choi@grata.com: 401 - {"error":"ERR_AUTH_FAILED"}
+2025-09-03 11:01:28,670 - INFO - ✅ Completed processing sung.choi@grata.com: no_data
+2025-09-03 11:01:28,671 - INFO - 📧 Processing email 9/10: dario@lendingfront.com
+2025-09-03 11:01:29,671 - INFO - 🚀 Processing email: dario@lendingfront.com
+2025-09-03 11:01:29,672 - INFO - Fetching Instantly data for: dario@lendingfront.com
+2025-09-03 11:01:30,087 - ERROR - ❌ Instantly API error for dario@lendingfront.com: 401 - {"error":"ERR_AUTH_FAILED"}
+2025-09-03 11:01:30,089 - INFO - ✅ Completed processing dario@lendingfront.com: no_data
+2025-09-03 11:01:30,089 - INFO - 📧 Processing email 10/10: fpretto@tomorrowsoffice.com
+2025-09-03 11:01:31,089 - INFO - 🚀 Processing email: fpretto@tomorrowsoffice.com
+2025-09-03 11:01:31,090 - INFO - Fetching Instantly data for: fpretto@tomorrowsoffice.com
+2025-09-03 11:01:31,461 - ERROR - ❌ Instantly API error for fpretto@tomorrowsoffice.com: 401 - {"error":"ERR_AUTH_FAILED"}
+2025-09-03 11:01:31,462 - INFO - ✅ Completed processing fpretto@tomorrowsoffice.com: no_data
+2025-09-03 11:01:31,463 - INFO - 🎉 Pipeline completed: 0 completed, 0 failed
+2025-09-03 11:01:31,463 - INFO - ✅ Database connection closed
+2025-09-03 11:57:23,214 - INFO - ✅ Directory structure verified
+2025-09-03 11:57:23,214 - INFO - ✅ Credentials loaded from environment
+2025-09-03 11:57:25,275 - ERROR - ❌ Database connection failed: connection to server at "127.0.0.1", port 5431 failed: Connection refused (0x0000274D/10061)
+	Is the server running on that host and accepting TCP/IP connections?
+
+2025-09-03 11:57:25,276 - ERROR - ❌ Error reading email file: connection to server at "127.0.0.1", port 5431 failed: Connection refused (0x0000274D/10061)
+	Is the server running on that host and accepting TCP/IP connections?
+
+2025-09-03 11:57:50,736 - INFO - ✅ Directory structure verified
+2025-09-03 11:57:50,736 - INFO - ✅ Credentials loaded from environment
+2025-09-03 11:57:51,028 - INFO - ✅ Database connection established
+2025-09-03 11:57:51,118 - WARNING - ⚠️ Table ml_lead_scoring.bronze_instantly_leads does not exist
+2025-09-03 11:57:51,161 - WARNING - ⚠️ Table ml_lead_scoring.bronze_apollo_enrichment does not exist
+2025-09-03 11:57:51,204 - WARNING - ⚠️ Table ml_lead_scoring.silver_enriched_leads does not exist
+2025-09-03 11:57:51,205 - INFO - ✅ Database schema verification complete
+2025-09-03 11:57:51,216 - INFO - 📊 CSV file loaded with 10 rows and columns: ['email', 'from_email', 'subject', 'campaign_id', 'message_id', 'timestamp_created', 'timestamp_email', 'lead_email', 'thread_id', 'is_unread', 'is_focused', 'ue_type', 'step', 'organization_id', 'eaccount']
+2025-09-03 11:57:51,216 - INFO - 📧 Using email column: 'email'
+2025-09-03 11:57:51,216 - INFO - ✅ Extracted 10 unique valid emails from CSV
+2025-09-03 11:57:51,217 - INFO - ✅ Database connection closed
+2025-09-03 11:57:51,217 - INFO - ✅ Directory structure verified
+2025-09-03 11:57:51,217 - INFO - ✅ Credentials loaded from environment
+2025-09-03 11:57:51,507 - INFO - ✅ Database connection established
+2025-09-03 11:57:51,600 - WARNING - ⚠️ Table ml_lead_scoring.bronze_instantly_leads does not exist
+2025-09-03 11:57:51,645 - WARNING - ⚠️ Table ml_lead_scoring.bronze_apollo_enrichment does not exist
+2025-09-03 11:57:51,692 - WARNING - ⚠️ Table ml_lead_scoring.silver_enriched_leads does not exist
+2025-09-03 11:57:51,693 - INFO - ✅ Database schema verification complete
+2025-09-03 11:57:51,693 - INFO - 🚀 Starting email enrichment pipeline for 10 emails
+2025-09-03 11:57:51,693 - INFO - 📧 Processing email 1/10: marcjacobs@ntop.com
+2025-09-03 11:57:52,694 - INFO - 🚀 Processing email: marcjacobs@ntop.com
+2025-09-03 11:57:52,694 - INFO - Fetching Instantly data for: marcjacobs@ntop.com
+2025-09-03 11:57:53,181 - ERROR - ❌ Instantly API authentication failed for marcjacobs@ntop.com - check API key
+2025-09-03 11:57:53,182 - INFO - Fetching Apollo data for: marcjacobs@ntop.com
+2025-09-03 11:57:54,531 - INFO - ✅ Apollo data retrieved for marcjacobs@ntop.com
+2025-09-03 11:57:54,578 - ERROR - ❌ Error inserting Instantly data for marcjacobs@ntop.com: relation "ml_lead_scoring.bronze_instantly_leads" does not exist
+LINE 2:                     INSERT INTO ml_lead_scoring.bronze_insta...
+                                        ^
+
+2025-09-03 11:57:54,623 - INFO - ✅ Completed processing marcjacobs@ntop.com: failed
+2025-09-03 11:57:54,624 - INFO - 📧 Processing email 2/10: paulr@fsmglobal.com
+2025-09-03 11:57:55,625 - INFO - 🚀 Processing email: paulr@fsmglobal.com
+2025-09-03 11:57:55,626 - INFO - Fetching Instantly data for: paulr@fsmglobal.com
+2025-09-03 11:57:56,063 - ERROR - ❌ Instantly API authentication failed for paulr@fsmglobal.com - check API key
+2025-09-03 11:57:56,065 - INFO - Fetching Apollo data for: paulr@fsmglobal.com
+2025-09-03 11:57:57,591 - INFO - ✅ Apollo data retrieved for paulr@fsmglobal.com
+2025-09-03 11:57:57,709 - ERROR - ❌ Error inserting Instantly data for paulr@fsmglobal.com: relation "ml_lead_scoring.bronze_instantly_leads" does not exist
+LINE 2:                     INSERT INTO ml_lead_scoring.bronze_insta...
+                                        ^
+
+2025-09-03 11:57:57,779 - INFO - ✅ Completed processing paulr@fsmglobal.com: failed
+2025-09-03 11:57:57,779 - INFO - 📧 Processing email 3/10: angelo.marcotullio@cisecurity.org
+2025-09-03 11:57:58,780 - INFO - 🚀 Processing email: angelo.marcotullio@cisecurity.org
+2025-09-03 11:57:58,781 - INFO - Fetching Instantly data for: angelo.marcotullio@cisecurity.org
+2025-09-03 11:57:59,551 - ERROR - ❌ Instantly API authentication failed for angelo.marcotullio@cisecurity.org - check API key
+2025-09-03 11:57:59,554 - INFO - Fetching Apollo data for: angelo.marcotullio@cisecurity.org
+2025-09-03 11:58:00,557 - INFO - ✅ Apollo data retrieved for angelo.marcotullio@cisecurity.org
+2025-09-03 11:58:00,650 - ERROR - ❌ Error inserting Instantly data for angelo.marcotullio@cisecurity.org: relation "ml_lead_scoring.bronze_instantly_leads" does not exist
+LINE 2:                     INSERT INTO ml_lead_scoring.bronze_insta...
+                                        ^
+
+2025-09-03 11:58:00,692 - INFO - ✅ Completed processing angelo.marcotullio@cisecurity.org: failed
+2025-09-03 11:58:00,692 - INFO - 📧 Processing email 4/10: jfuccillo@nectarcorp.com
+2025-09-03 11:58:01,692 - INFO - 🚀 Processing email: jfuccillo@nectarcorp.com
+2025-09-03 11:58:01,693 - INFO - Fetching Instantly data for: jfuccillo@nectarcorp.com
+2025-09-03 11:58:02,039 - ERROR - ❌ Instantly API authentication failed for jfuccillo@nectarcorp.com - check API key
+2025-09-03 11:58:02,040 - INFO - Fetching Apollo data for: jfuccillo@nectarcorp.com
+2025-09-03 11:58:03,106 - INFO - ✅ Apollo data retrieved for jfuccillo@nectarcorp.com
+2025-09-03 11:58:03,197 - ERROR - ❌ Error inserting Instantly data for jfuccillo@nectarcorp.com: relation "ml_lead_scoring.bronze_instantly_leads" does not exist
+LINE 2:                     INSERT INTO ml_lead_scoring.bronze_insta...
+                                        ^
+
+2025-09-03 11:58:03,241 - INFO - ✅ Completed processing jfuccillo@nectarcorp.com: failed
+2025-09-03 11:58:03,242 - INFO - 📧 Processing email 5/10: maria@daydream.ing
+2025-09-03 11:58:04,242 - INFO - 🚀 Processing email: maria@daydream.ing
+2025-09-03 11:58:04,242 - INFO - Fetching Instantly data for: maria@daydream.ing
+2025-09-03 11:58:04,653 - ERROR - ❌ Instantly API authentication failed for maria@daydream.ing - check API key
+2025-09-03 11:58:04,654 - INFO - Fetching Apollo data for: maria@daydream.ing
+2025-09-03 11:58:05,708 - INFO - ✅ Apollo data retrieved for maria@daydream.ing
+2025-09-03 11:58:05,797 - ERROR - ❌ Error inserting Instantly data for maria@daydream.ing: relation "ml_lead_scoring.bronze_instantly_leads" does not exist
+LINE 2:                     INSERT INTO ml_lead_scoring.bronze_insta...
+                                        ^
+
+2025-09-03 11:58:05,842 - INFO - ✅ Completed processing maria@daydream.ing: failed
+2025-09-03 11:58:05,842 - INFO - 📧 Processing email 6/10: jtoohey@tunein.com
+2025-09-03 11:58:06,843 - INFO - 🚀 Processing email: jtoohey@tunein.com
+2025-09-03 11:58:06,844 - INFO - Fetching Instantly data for: jtoohey@tunein.com
+2025-09-03 11:58:10,048 - ERROR - ❌ Instantly API authentication failed for jtoohey@tunein.com - check API key
+2025-09-03 11:58:10,049 - INFO - Fetching Apollo data for: jtoohey@tunein.com
+2025-09-03 11:58:11,110 - INFO - ✅ Apollo data retrieved for jtoohey@tunein.com
+2025-09-03 11:58:11,199 - ERROR - ❌ Error inserting Instantly data for jtoohey@tunein.com: relation "ml_lead_scoring.bronze_instantly_leads" does not exist
+LINE 2:                     INSERT INTO ml_lead_scoring.bronze_insta...
+                                        ^
+
+2025-09-03 11:58:11,239 - INFO - ✅ Completed processing jtoohey@tunein.com: failed
+2025-09-03 11:58:11,239 - INFO - 📧 Processing email 7/10: noah@beehiiv.com
+2025-09-03 11:58:12,239 - INFO - 🚀 Processing email: noah@beehiiv.com
+2025-09-03 11:58:12,240 - INFO - Fetching Instantly data for: noah@beehiiv.com
+2025-09-03 11:58:13,051 - ERROR - ❌ Instantly API authentication failed for noah@beehiiv.com - check API key
+2025-09-03 11:58:13,052 - INFO - Fetching Apollo data for: noah@beehiiv.com
+2025-09-03 11:58:14,019 - INFO - ✅ Apollo data retrieved for noah@beehiiv.com
+2025-09-03 11:58:14,103 - ERROR - ❌ Error inserting Instantly data for noah@beehiiv.com: relation "ml_lead_scoring.bronze_instantly_leads" does not exist
+LINE 2:                     INSERT INTO ml_lead_scoring.bronze_insta...
+                                        ^
+
+2025-09-03 11:58:14,146 - INFO - ✅ Completed processing noah@beehiiv.com: failed
+2025-09-03 11:58:14,146 - INFO - 📧 Processing email 8/10: sung.choi@grata.com
+2025-09-03 11:58:15,147 - INFO - 🚀 Processing email: sung.choi@grata.com
+2025-09-03 11:58:15,148 - INFO - Fetching Instantly data for: sung.choi@grata.com
+2025-09-03 11:58:15,514 - ERROR - ❌ Instantly API authentication failed for sung.choi@grata.com - check API key
+2025-09-03 11:58:15,517 - INFO - Fetching Apollo data for: sung.choi@grata.com
+2025-09-03 11:58:16,861 - INFO - ✅ Apollo data retrieved for sung.choi@grata.com
+2025-09-03 11:58:16,949 - ERROR - ❌ Error inserting Instantly data for sung.choi@grata.com: relation "ml_lead_scoring.bronze_instantly_leads" does not exist
+LINE 2:                     INSERT INTO ml_lead_scoring.bronze_insta...
+                                        ^
+
+2025-09-03 11:58:16,999 - INFO - ✅ Completed processing sung.choi@grata.com: failed
+2025-09-03 11:58:16,999 - INFO - 📧 Processing email 9/10: dario@lendingfront.com
+2025-09-03 11:58:17,999 - INFO - 🚀 Processing email: dario@lendingfront.com
+2025-09-03 11:58:18,000 - INFO - Fetching Instantly data for: dario@lendingfront.com
+2025-09-03 11:58:18,780 - ERROR - ❌ Instantly API authentication failed for dario@lendingfront.com - check API key
+2025-09-03 11:58:18,782 - INFO - Fetching Apollo data for: dario@lendingfront.com
+2025-09-03 11:58:20,338 - INFO - ✅ Apollo data retrieved for dario@lendingfront.com
+2025-09-03 11:58:20,428 - ERROR - ❌ Error inserting Instantly data for dario@lendingfront.com: relation "ml_lead_scoring.bronze_instantly_leads" does not exist
+LINE 2:                     INSERT INTO ml_lead_scoring.bronze_insta...
+                                        ^
+
+2025-09-03 11:58:20,469 - INFO - ✅ Completed processing dario@lendingfront.com: failed
+2025-09-03 11:58:20,470 - INFO - 📧 Processing email 10/10: fpretto@tomorrowsoffice.com
+2025-09-03 11:58:21,470 - INFO - 🚀 Processing email: fpretto@tomorrowsoffice.com
+2025-09-03 11:58:21,471 - INFO - Fetching Instantly data for: fpretto@tomorrowsoffice.com
+2025-09-03 11:58:21,836 - ERROR - ❌ Instantly API authentication failed for fpretto@tomorrowsoffice.com - check API key
+2025-09-03 11:58:21,837 - INFO - Fetching Apollo data for: fpretto@tomorrowsoffice.com
+2025-09-03 11:58:22,899 - INFO - ✅ Apollo data retrieved for fpretto@tomorrowsoffice.com
+2025-09-03 11:58:22,983 - ERROR - ❌ Error inserting Instantly data for fpretto@tomorrowsoffice.com: relation "ml_lead_scoring.bronze_instantly_leads" does not exist
+LINE 2:                     INSERT INTO ml_lead_scoring.bronze_insta...
+                                        ^
+
+2025-09-03 11:58:23,027 - INFO - ✅ Completed processing fpretto@tomorrowsoffice.com: failed
+2025-09-03 11:58:23,027 - INFO - 🎉 Pipeline completed: 0 completed, 10 failed
+2025-09-03 11:58:23,029 - INFO - ✅ Database connection closed

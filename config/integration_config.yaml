@@ -1,0 +1,182 @@
+# ML Lead Scoring System Integration Configuration
+# Based on transcript meeting requirements
+
+# Database Configuration
+database:
+  host: localhost
+  port: 5432
+  database: ml_lead_scoring
+  user: postgres
+  password: ml_password_123
+
+# N8N Configuration
+n8n:
+  port: 5678
+  host: localhost
+  user: admin
+  password: n8n_admin_123
+  workflows:
+    instantly_ingestion: "n8n_instantly_ingestion_workflow.json"
+    apollo_enrichment: "n8n_apollo_enrichment_workflow.json"
+    prediction: "n8n_prediction_workflow.json"
+
+# Apollo API Configuration (20K credits/month limit from transcript)
+apollo:
+  api_key: "K05UXxdZgCaAFgYCTqJWmQ"
+  base_url: "https://api.apollo.io/api/v1"
+  monthly_limit: 20000
+  reserve_credits: 2000  # Reserve credits for training pipeline
+  rate_limit_delay: 1    # Seconds between requests
+  max_batch_size: 50     # Maximum leads per batch
+  headers:
+    accept: "application/json"
+    cache_control: "no-cache" 
+    content_type: "application/json"
+    api_key_header: "x-api-key"  # Notebook uses lowercase x-api-key
+
+# Instantly API Configuration (from successful notebook examples)
+instantly:
+  api_key: "ZjQ0Mjc3ZGUtNjliMi00YmMzLWE2OWMtMjhhZmQ0MDk0MTIzOkx5VWZ6UnB6RmR3Zw=="
+  organization_id: "f44277de-69b2-4bc3-a69c-28afd4094123"
+  base_url: "https://api.instantly.ai/api/v2"
+  update_frequency: daily  # Daily ingestion as discussed
+  batch_size: 1000
+  retry_attempts: 3
+
+# Lead Maturity Configuration (1 month vs 2 weeks discussion from transcript)
+maturity:
+  # Primary setting - 1 month (Mitchell's recommendation)
+  gold_layer_days: 30
+  
+  # Alternative settings for different environments
+  development_days: 7      # 1 week for testing
+  staging_days: 14        # 2 weeks for staging
+  sales_team_preference: 14  # 2 weeks (Ricardo's observation)
+  
+  # Engagement scoring windows
+  engagement_window_days: 14    # Primary engagement window
+  extended_engagement_days: 30  # Extended tracking
+  
+  # Update frequency for existing records
+  silver_update_frequency: daily
+  gold_processing_frequency: weekly
+
+# Model Configuration
+model:
+  default_type: random_forest
+  training_schedule: weekly
+  retraining_triggers:
+    performance_drop: 0.05    # 5% performance drop
+    data_drift_threshold: 0.1 # 10% data drift
+    min_training_samples: 100
+  
+  feature_selection:
+    enable_pruning: true
+    importance_threshold: 0.01
+    max_features: 50
+
+# Monitoring Configuration
+monitoring:
+  alerts:
+    apollo_credits:
+      warning_threshold: 2000   # Warn when < 2000 credits
+      critical_threshold: 500   # Critical when < 500 credits
+    
+    data_quality:
+      warning_threshold: 0.7    # Warn when quality < 0.7
+      critical_threshold: 0.5   # Critical when quality < 0.5
+    
+    model_performance:
+      warning_threshold: 0.6    # Warn when performance < 0.6
+      critical_threshold: 0.4   # Critical when performance < 0.4
+    
+    data_freshness:
+      warning_hours: 24         # Warn if no data for 24 hours
+      critical_hours: 48        # Critical if no data for 48 hours
+  
+  notification:
+    email:
+      smtp_server: smtp.gmail.com
+      smtp_port: 587
+      sender_email: ""
+      sender_password: ""
+      recipients: []
+    
+    cooldown_hours: 12          # Hours between similar alerts
+
+# Data Quality Configuration
+data_quality:
+  completeness_threshold: 0.95  # 95% completeness required
+  accuracy_threshold: 0.90      # 90% accuracy required
+  consistency_threshold: 0.85   # 85% consistency required
+  uniqueness_threshold: 0.95    # 95% uniqueness required
+  
+  validation_rules:
+    email_format: true
+    company_name_length: 100
+    title_length: 200
+    employee_count_range: [1, 1000000]
+
+# Pipeline Configuration
+pipeline:
+  daily_schedule:
+    - instantly_ingestion    # Step 1: Get new Instantly data
+    - apollo_enrichment     # Step 2: Enrich new leads only
+    - silver_processing     # Step 3: Process to ML-ready features
+    - gold_processing       # Step 4: Move mature data for training
+    - model_evaluation      # Step 5: Check if retraining needed
+    - monitoring_update     # Step 6: Update monitoring metrics
+  
+  error_handling:
+    max_retries: 3
+    retry_delay: 60          # Seconds
+    continue_on_error: true   # Continue pipeline even if one step fails
+  
+  logging:
+    level: INFO
+    file: logs/ml_lead_scoring_integration.log
+    max_size_mb: 100
+    backup_count: 5
+
+# Cost Optimization (EC2 management from transcript)
+cost_optimization:
+  ec2_management:
+    auto_stop_after_task: true
+    instance_type: t3.large
+    max_runtime_hours: 2
+  
+  apollo_usage:
+    daily_limit: 200         # Daily limit to spread usage
+    prioritize_new_leads: true
+    skip_recent_enrichment: true
+
+# Security Configuration
+security:
+  api_keys:
+    encryption: true
+    rotation_days: 90
+  
+  database:
+    ssl_mode: prefer
+    connection_timeout: 30
+  
+  network:
+    allowed_ips: []          # Empty means all IPs allowed (for development)
+    rate_limiting: true
+
+# Development vs Production Settings
+environments:
+  development:
+    maturity_days: 7         # Faster iteration
+    apollo_monthly_limit: 1000
+    log_level: DEBUG
+    
+  staging:
+    maturity_days: 14
+    apollo_monthly_limit: 5000
+    log_level: INFO
+    
+  production:
+    maturity_days: 30        # Full maturity period
+    apollo_monthly_limit: 20000
+    log_level: INFO

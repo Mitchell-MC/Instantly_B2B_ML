@@ -1,0 +1,18 @@
+# Email Enrichment Pipeline Environment Variables
+# Copy this to your Instantly.env file and fill in the actual values
+
+# API Keys
+INSTANTLY_API_KEY=your_instantly_api_key_here
+APOLLO_API_KEY=your_apollo_api_key_here
+
+# Database Configuration
+DB_HOST=127.0.0.1
+DB_PORT=5431
+DB_NAME=postgres
+DB_USER=mitchell
+DB_PASSWORD=CTej3Ba8uBrx6o
+DB_SSL=true
+
+# Optional: Rate limiting and other settings
+INSTANTLY_RATE_LIMIT=10
+APOLLO_RATE_LIMIT=5

@@ -1,311 +1,341 @@
 {
-    "name": "Apollo Lead Search & Prediction Pipeline",
-    "nodes": [
-      {
-        "parameters": {
-          "httpMethod": "POST",
-          "path": "api/v1/people/search",
-          "authentication": "genericCredentialType",
-          "genericAuthType": "httpHeaderAuth",
-          "nodeCredentialType": "apolloApi",
-          "sendBody": true,
-          "bodyParameters": {
-            "parameters": [
-              {
-                "name": "q",
-                "value": "={{ $json.search_query }}"
-              },
-              {
-                "name": "title_include",
-                "value": "={{ $json.title_filters }}"
-              },
-              {
-                "name": "organization_domains",
-                "value": "={{ $json.company_domains }}"
-              },
-              {
-                "name": "locations",
-                "value": "={{ $json.location_filters }}"
-              },
-              {
-                "name": "page",
-                "value": "1"
-              },
-              {
-                "name": "per_page",
-                "value": "100"
-              }
-            ]
-          },
-          "options": {}
-        },
-        "id": "search-apollo-leads",
-        "name": "Search Apollo Leads",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [240, 300],
-        "webhookId": "apollo-search"
-      },
-      {
-        "parameters": {
-          "httpMethod": "POST",
-          "path": "api/v1/people/enrich",
-          "authentication": "genericCredentialType",
-          "genericAuthType": "httpHeaderAuth",
-          "nodeCredentialType": "apolloApi",
-          "sendBody": true,
-          "bodyParameters": {
-            "parameters": [
-              {
-                "name": "email",
-                "value": "={{ $json.email }}"
-              }
-            ]
-          },
-          "options": {}
-        },
-        "id": "enrich-apollo-contacts",
-        "name": "Enrich Apollo Contacts",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [460, 300]
-      },
-      {
-        "parameters": {
-          "jsCode": "// Enrich each Apollo contact with additional data\nconst enrichedContacts = [];\n\nfor (const contact of $input.all()) {\n  const contactData = contact.json;\n  \n  // Enrich with additional Apollo data\n  const enrichedContact = {\n    // Basic contact info\n    apollo_contact_id: contactData.id,\n    first_name: contactData.first_name,\n    last_name: contactData.last_name,\n    title: contactData.title,\n    email: contactData.email,\n    \n    // Company information\n    company_name: contactData.organization?.name,\n    company_industry: contactData.organization?.industry,\n    company_size: contactData.organization?.size,\n    company_founded_year: contactData.organization?.founded_year,\n    company_website: contactData.organization?.website,\n    company_linkedin: contactData.organization?.linkedin_url,\n    company_phone: contactData.organization?.phone,\n    company_address: contactData.organization?.address,\n    \n    // Location data\n    city: contactData.location?.city,\n    state: contactData.location?.state,\n    country: contactData.location?.country,\n    \n    // Additional Apollo fields\n    page_retrieved: contactData.page_retrieved,\n    contact_email_status: contactData.contact_email_status,\n    \n    // Raw Apollo data for feature engineering\n    apollo_raw_data: contactData\n  };\n  \n  enrichedContacts.push(enrichedContact);\n}\n\nreturn enrichedContacts;"
-        },
-        "id": "enrich-contacts",
-        "name": "Enrich Contacts",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [680, 300]
-      },
-      {
-        "parameters": {
-          "httpMethod": "POST",
-          "path": "api/v2/leads/enrich",
-          "authentication": "genericCredentialType",
-          "genericAuthType": "httpHeaderAuth",
-          "nodeCredentialType": "instantlyApi",
-          "sendBody": true,
-          "bodyParameters": {
-            "parameters": [
-              {
-                "name": "email",
-                "value": "={{ $json.email }}"
-              },
-              {
-                "name": "first_name",
-                "value": "={{ $json.first_name }}"
-              },
-              {
-                "name": "last_name",
-                "value": "={{ $json.last_name }}"
-              },
-              {
-                "name": "title",
-                "value": "={{ $json.title }}"
-              },
-              {
-                "name": "company",
-                "value": "={{ $json.company_name }}"
-              }
-            ]
-          },
-          "options": {}
-        },
-        "id": "instantly-enrichment",
-        "name": "Instantly Enrichment",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [900, 300]
-      },
-      {
-        "parameters": {
-          "jsCode": "// Merge Apollo and Instantly enrichment data\nconst mergedData = [];\n\nfor (const contact of $input.all()) {\n  const apolloData = contact.json;\n  const instantlyData = contact.instantly_enrichment || {};\n  \n  // Create merged contact with all enrichment data\n  const mergedContact = {\n    // Apollo data\n    apollo_contact_id: apolloData.apollo_contact_id,\n    first_name: apolloData.first_name,\n    last_name: apolloData.last_name,\n    title: apolloData.title,\n    email: apolloData.email,\n    company_name: apolloData.company_name,\n    company_industry: apolloData.company_industry,\n    company_size: apolloData.company_size,\n    company_founded_year: apolloData.company_founded_year,\n    company_website: apolloData.company_website,\n    company_linkedin: apolloData.company_linkedin,\n    city: apolloData.city,\n    state: apolloData.state,\n    country: apolloData.country,\n    page_retrieved: apolloData.page_retrieved,\n    \n    // Instantly enrichment\n    instantly_enrichment_status: instantlyData.status || 'not_enriched',\n    instantly_campaign_data: instantlyData.campaign_data || {},\n    \n    // Combined enrichment metadata\n    total_enrichment_score: (apolloData.page_retrieved || 100) + (instantlyData.status === 'enriched' ? 50 : 0),\n    enrichment_timestamp: new Date().toISOString()\n  };\n  \n  mergedData.push(mergedContact);\n}\n\nreturn mergedData;"
-        },
-        "id": "merge-enrichment-data",
-        "name": "Merge Enrichment Data",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [1120, 300]
-      },
-      {
-        "parameters": {
-          "jsCode": "// Prepare data for ML prediction\nconst predictionData = $input.all().map(contact => {\n  const data = contact.json;\n  \n  // Create features matching the training model\n  const features = {\n    // Basic contact features\n    has_first_name: data.first_name ? 1 : 0,\n    has_last_name: data.last_name ? 1 : 0,\n    has_title: data.title ? 1 : 0,\n    has_company: data.company_name ? 1 : 0,\n    \n    // Company features\n    company_size_numeric: data.company_size ? parseInt(data.company_size.replace(/[^0-9]/g, '')) : 0,\n    company_age: data.company_founded_year ? (2025 - parseInt(data.company_founded_year)) : 0,\n    has_website: data.company_website ? 1 : 0,\n    has_linkedin: data.company_linkedin ? 1 : 0,\n    \n    // Location features\n    has_city: data.city ? 1 : 0,\n    has_state: data.state ? 1 : 0,\n    has_country: data.country ? 1 : 0,\n    \n    // Enrichment features\n    enrichment_completeness: data.total_enrichment_score / 150, // Normalize to 0-1\n    page_retrieved_normalized: data.page_retrieved ? (100 - data.page_retrieved) / 100 : 0,\n    \n    // Text features\n    title_length: data.title ? data.title.length : 0,\n    company_name_length: data.company_name ? data.company_name.length : 0\n  };\n  \n  return {\n    contact_id: data.apollo_contact_id,\n    email: data.email,\n    name: `${data.first_name || ''} ${data.last_name || ''}`.trim(),\n    title: data.title,\n    company: data.company_name,\n    features: features\n  };\n});\n\nreturn {\n  json: {\n    prediction_data: predictionData,\n    total_contacts: predictionData.length,\n    feature_count: Object.keys(predictionData[0].features).length\n  }\n};"
-        },
-        "id": "prepare-prediction-data",
-        "name": "Prepare Prediction Data",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [1340, 300]
-      },
-      {
-        "parameters": {
-          "httpMethod": "POST",
-          "url": "http://localhost:8000/predict",
-          "sendBody": true,
-          "bodyParameters": {
-            "parameters": [
-              {
-                "name": "data",
-                "value": "={{ $json.prediction_data }}"
-              },
-              {
-                "name": "model_version",
-                "value": "latest"
-              }
-            ]
-          },
-          "options": {}
-        },
-        "id": "get-ml-predictions",
-        "name": "Get ML Predictions",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [1560, 300]
-      },
-      {
-        "parameters": {
-          "jsCode": "// Combine predictions with contact data and create CSV\nconst predictions = $input.first().json.predictions;\nconst probabilities = $input.first().json.probabilities;\nconst contactData = $input.first().json.contact_data;\n\nconst csvRows = [];\n\n// Add header\ncsvRows.push('Contact ID,Email,Name,Title,Company,Predicted Engagement Level,Probability No Engagement,Probability Opened,Probability Engaged,Confidence Score');\n\n// Add data rows\nfor (let i = 0; i < predictions.length; i++) {\n  const contact = contactData[i];\n  const prediction = predictions[i];\n  const prob = probabilities[i];\n  \n  // Map prediction levels to readable text\n  const engagementLevels = ['No Engagement', 'Opened', 'Engaged'];\n  const predictedLevel = engagementLevels[prediction] || 'Unknown';\n  \n  // Calculate confidence score\n  const confidenceScore = Math.max(...prob) * 100;\n  \n  const row = [\n    contact.contact_id,\n    contact.email,\n    contact.name,\n    contact.title,\n    contact.company,\n    predictedLevel,\n    (prob[0] * 100).toFixed(2) + '%',\n    (prob[1] * 100).toFixed(2) + '%',\n    (prob[2] * 100).toFixed(2) + '%',\n    confidenceScore.toFixed(2) + '%'\n  ].join(',');\n  \n  csvRows.push(row);\n}\n\n// Create summary statistics\nconst totalContacts = predictions.length;\nconst engagementCounts = predictions.reduce((acc, pred) => {\n  acc[pred] = (acc[pred] || 0) + 1;\n  return acc;\n}, {});\n\nconst summary = {\n  total_contacts: totalContacts,\n  predictions: {\n    'no_engagement': engagementCounts[0] || 0,\n    'opened': engagementCounts[1] || 0,\n    'engaged': engagementCounts[2] || 0\n  },\n  csv_content: csvRows.join('\\n'),\n  timestamp: new Date().toISOString()\n};\n\nreturn {\n  json: summary\n};"
-        },
-        "id": "create-prediction-csv",
-        "name": "Create Prediction CSV",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [1780, 300]
-      },
-      {
-        "parameters": {
-          "operation": "write",
-          "fileName": "apollo_lead_predictions.csv",
-          "options": {}
-        },
-        "id": "save-predictions-csv",
-        "name": "Save Predictions CSV",
-        "type": "n8n-nodes-base.fileOperations",
-        "typeVersion": 1.1,
-        "position": [2000, 300]
-      },
-      {
-        "parameters": {
-          "jsCode": "// Log prediction results\nconst results = $input.first().json;\n\nconsole.log('🎯 Lead Prediction Complete!');\nconsole.log('�� Prediction Summary:');\nconsole.log(`  Total Contacts: ${results.total_contacts}`);\nconsole.log(`  No Engagement: ${results.predictions.no_engagement} (${(results.predictions.no_engagement/results.total_contacts*100).toFixed(1)}%)`);\nconsole.log(`  Opened: ${results.predictions.opened} (${(results.predictions.opened/results.total_contacts*100).toFixed(1)}%)`);\nconsole.log(`  Engaged: ${results.predictions.engaged} (${(results.predictions.engaged/results.total_contacts*100).toFixed(1)}%)`);\nconsole.log(`  CSV saved to: apollo_lead_predictions.csv`);\n\nreturn {\n  json: {\n    status: 'success',\n    message: 'Lead predictions completed successfully',\n    results: results,\n    timestamp: new Date().toISOString()\n  }\n};"
-        },
-        "id": "log-prediction-results",
-        "name": "Log Prediction Results",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 2,
-        "position": [2220, 300]
-      }
-    ],
-    "connections": {
-      "Search Apollo Leads": {
-        "main": [
-          [
+  "name": "Apollo Lead Search & Prediction Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "api/v1/people/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "nodeCredentialType": "apolloApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
             {
-              "node": "Enrich Apollo Contacts",
-              "type": "main",
-              "index": 0
+              "name": "q",
+              "value": "={{ $json.search_query }}"
+            },
+            {
+              "name": "title_include",
+              "value": "={{ $json.title_filters }}"
+            },
+            {
+              "name": "organization_domains",
+              "value": "={{ $json.company_domains }}"
+            },
+            {
+              "name": "locations",
+              "value": "={{ $json.location_filters }}"
+            },
+            {
+              "name": "page",
+              "value": "1"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
             }
           ]
-        ]
+        },
+        "options": {}
       },
-      "Enrich Apollo Contacts": {
-        "main": [
-          [
-            {
-              "node": "Enrich Contacts",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Enrich Contacts": {
-        "main": [
-          [
-            {
-              "node": "Instantly Enrichment",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Instantly Enrichment": {
-        "main": [
-          [
-            {
-              "node": "Merge Enrichment Data",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Merge Enrichment Data": {
-        "main": [
-          [
-            {
-              "node": "Prepare Prediction Data",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Prepare Prediction Data": {
-        "main": [
-          [
-            {
-              "node": "Get ML Predictions",
-              "type": "main",
-              "index": 0"
-            }
-          ]
-        ]
-      },
-      "Get ML Predictions": {
-        "main": [
-          [
-            {
-              "node": "Create Prediction CSV",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Create Prediction CSV": {
-        "main": [
-          [
-            {
-              "node": "Save Predictions CSV",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Save Predictions CSV": {
-        "main": [
-          [
-            {
-              "node": "Log Prediction Results",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      }
+      "id": "search-apollo-leads",
+      "name": "Search Apollo Leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "apollo-search"
     },
-    "pinData": {},
-    "settings": {
-      "executionOrder": "v1"
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "api/v1/people/enrich",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "nodeCredentialType": "apolloApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "enrich-apollo-contacts",
+      "name": "Enrich Apollo Contacts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        460,
+        300
+      ]
     },
-    "staticData": null,
-    "tags": [],
-    "triggerCount": 0,
-    "updatedAt": "2025-01-15T10:00:00.000Z",
-    "versionId": "1"
-  }
+    {
+      "parameters": {
+        "jsCode": "// Enrich each Apollo contact with additional data\nconst enrichedContacts = [];\n\nfor (const contact of $input.all()) {\n  const contactData = contact.json;\n  \n  // Enrich with additional Apollo data\n  const enrichedContact = {\n    // Basic contact info\n    apollo_contact_id: contactData.id,\n    first_name: contactData.first_name,\n    last_name: contactData.last_name,\n    title: contactData.title,\n    email: contactData.email,\n    \n    // Company information\n    company_name: contactData.organization?.name,\n    company_industry: contactData.organization?.industry,\n    company_size: contactData.organization?.size,\n    company_founded_year: contactData.organization?.founded_year,\n    company_website: contactData.organization?.website,\n    company_linkedin: contactData.organization?.linkedin_url,\n    company_phone: contactData.organization?.phone,\n    company_address: contactData.organization?.address,\n    \n    // Location data\n    city: contactData.location?.city,\n    state: contactData.location?.state,\n    country: contactData.location?.country,\n    \n    // Additional Apollo fields\n    page_retrieved: contactData.page_retrieved,\n    contact_email_status: contactData.contact_email_status,\n    \n    // Raw Apollo data for feature engineering\n    apollo_raw_data: contactData\n  };\n  \n  enrichedContacts.push(enrichedContact);\n}\n\nreturn enrichedContacts;"
+      },
+      "id": "enrich-contacts",
+      "name": "Enrich Contacts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "api/v2/leads/enrich",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "nodeCredentialType": "instantlyApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "first_name",
+              "value": "={{ $json.first_name }}"
+            },
+            {
+              "name": "last_name",
+              "value": "={{ $json.last_name }}"
+            },
+            {
+              "name": "title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "company",
+              "value": "={{ $json.company_name }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "instantly-enrichment",
+      "name": "Instantly Enrichment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge Apollo and Instantly enrichment data\nconst mergedData = [];\n\nfor (const contact of $input.all()) {\n  const apolloData = contact.json;\n  const instantlyData = contact.instantly_enrichment || {};\n  \n  // Create merged contact with all enrichment data\n  const mergedContact = {\n    // Apollo data\n    apollo_contact_id: apolloData.apollo_contact_id,\n    first_name: apolloData.first_name,\n    last_name: apolloData.last_name,\n    title: apolloData.title,\n    email: apolloData.email,\n    company_name: apolloData.company_name,\n    company_industry: apolloData.company_industry,\n    company_size: apolloData.company_size,\n    company_founded_year: apolloData.company_founded_year,\n    company_website: apolloData.company_website,\n    company_linkedin: apolloData.company_linkedin,\n    city: apolloData.city,\n    state: apolloData.state,\n    country: apolloData.country,\n    page_retrieved: apolloData.page_retrieved,\n    \n    // Instantly enrichment\n    instantly_enrichment_status: instantlyData.status || 'not_enriched',\n    instantly_campaign_data: instantlyData.campaign_data || {},\n    \n    // Combined enrichment metadata\n    total_enrichment_score: (apolloData.page_retrieved || 100) + (instantlyData.status === 'enriched' ? 50 : 0),\n    enrichment_timestamp: new Date().toISOString()\n  };\n  \n  mergedData.push(mergedContact);\n}\n\nreturn mergedData;"
+      },
+      "id": "merge-enrichment-data",
+      "name": "Merge Enrichment Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare data for ML prediction\nconst predictionData = $input.all().map(contact => {\n  const data = contact.json;\n  \n  // Create features matching the training model\n  const features = {\n    // Basic contact features\n    has_first_name: data.first_name ? 1 : 0,\n    has_last_name: data.last_name ? 1 : 0,\n    has_title: data.title ? 1 : 0,\n    has_company: data.company_name ? 1 : 0,\n    \n    // Company features\n    company_size_numeric: data.company_size ? parseInt(data.company_size.replace(/[^0-9]/g, '')) : 0,\n    company_age: data.company_founded_year ? (2025 - parseInt(data.company_founded_year)) : 0,\n    has_website: data.company_website ? 1 : 0,\n    has_linkedin: data.company_linkedin ? 1 : 0,\n    \n    // Location features\n    has_city: data.city ? 1 : 0,\n    has_state: data.state ? 1 : 0,\n    has_country: data.country ? 1 : 0,\n    \n    // Enrichment features\n    enrichment_completeness: data.total_enrichment_score / 150, // Normalize to 0-1\n    page_retrieved_normalized: data.page_retrieved ? (100 - data.page_retrieved) / 100 : 0,\n    \n    // Text features\n    title_length: data.title ? data.title.length : 0,\n    company_name_length: data.company_name ? data.company_name.length : 0\n  };\n  \n  return {\n    contact_id: data.apollo_contact_id,\n    email: data.email,\n    name: `${data.first_name || ''} ${data.last_name || ''}`.trim(),\n    title: data.title,\n    company: data.company_name,\n    features: features\n  };\n});\n\nreturn {\n  json: {\n    prediction_data: predictionData,\n    total_contacts: predictionData.length,\n    feature_count: Object.keys(predictionData[0].features).length\n  }\n};"
+      },
+      "id": "prepare-prediction-data",
+      "name": "Prepare Prediction Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "url": "http://localhost:8000/predict",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "data",
+              "value": "={{ $json.prediction_data }}"
+            },
+            {
+              "name": "model_version",
+              "value": "latest"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-ml-predictions",
+      "name": "Get ML Predictions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine predictions with contact data and create CSV\nconst predictions = $input.first().json.predictions;\nconst probabilities = $input.first().json.probabilities;\nconst contactData = $input.first().json.contact_data;\n\nconst csvRows = [];\n\n// Add header\ncsvRows.push('Contact ID,Email,Name,Title,Company,Predicted Engagement Level,Probability No Engagement,Probability Opened,Probability Engaged,Confidence Score');\n\n// Add data rows\nfor (let i = 0; i < predictions.length; i++) {\n  const contact = contactData[i];\n  const prediction = predictions[i];\n  const prob = probabilities[i];\n  \n  // Map prediction levels to readable text\n  const engagementLevels = ['No Engagement', 'Opened', 'Engaged'];\n  const predictedLevel = engagementLevels[prediction] || 'Unknown';\n  \n  // Calculate confidence score\n  const confidenceScore = Math.max(...prob) * 100;\n  \n  const row = [\n    contact.contact_id,\n    contact.email,\n    contact.name,\n    contact.title,\n    contact.company,\n    predictedLevel,\n    (prob[0] * 100).toFixed(2) + '%',\n    (prob[1] * 100).toFixed(2) + '%',\n    (prob[2] * 100).toFixed(2) + '%',\n    confidenceScore.toFixed(2) + '%'\n  ].join(',');\n  \n  csvRows.push(row);\n}\n\n// Create summary statistics\nconst totalContacts = predictions.length;\nconst engagementCounts = predictions.reduce((acc, pred) => {\n  acc[pred] = (acc[pred] || 0) + 1;\n  return acc;\n}, {});\n\nconst summary = {\n  total_contacts: totalContacts,\n  predictions: {\n    'no_engagement': engagementCounts[0] || 0,\n    'opened': engagementCounts[1] || 0,\n    'engaged': engagementCounts[2] || 0\n  },\n  csv_content: csvRows.join('\\n'),\n  timestamp: new Date().toISOString()\n};\n\nreturn {\n  json: summary\n};"
+      },
+      "id": "create-prediction-csv",
+      "name": "Create Prediction CSV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "apollo_lead_predictions.csv",
+        "options": {}
+      },
+      "id": "save-predictions-csv",
+      "name": "Save Predictions CSV",
+      "type": "n8n-nodes-base.fileOperations",
+      "typeVersion": 1.1,
+      "position": [
+        2000,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log prediction results\nconst results = $input.first().json;\n\nconsole.log('🎯 Lead Prediction Complete!');\nconsole.log('📋 Prediction Summary:');\nconsole.log(`  Total Contacts: ${results.total_contacts}`);\nconsole.log(`  No Engagement: ${results.predictions.no_engagement} (${(results.predictions.no_engagement/results.total_contacts*100).toFixed(1)}%)`);\nconsole.log(`  Opened: ${results.predictions.opened} (${(results.predictions.opened/results.total_contacts*100).toFixed(1)}%)`);\nconsole.log(`  Engaged: ${results.predictions.engaged} (${(results.predictions.engaged/results.total_contacts*100).toFixed(1)}%)`);\nconsole.log(`  CSV saved to: apollo_lead_predictions.csv`);\n\nreturn {\n  json: {\n    status: 'success',\n    message: 'Lead predictions completed successfully',\n    results: results,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "log-prediction-results",
+      "name": "Log Prediction Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2220,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Search Apollo Leads": {
+      "main": [
+        [
+          {
+            "node": "Enrich Apollo Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich Apollo Contacts": {
+      "main": [
+        [
+          {
+            "node": "Enrich Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich Contacts": {
+      "main": [
+        [
+          {
+            "node": "Instantly Enrichment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Instantly Enrichment": {
+      "main": [
+        [
+          {
+            "node": "Merge Enrichment Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Enrichment Data": {
+      "main": [
+        [
+          {
+            "node": "Prepare Prediction Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Prediction Data": {
+      "main": [
+        [
+          {
+            "node": "Get ML Predictions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get ML Predictions": {
+      "main": [
+        [
+          {
+            "node": "Create Prediction CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Prediction CSV": {
+      "main": [
+        [
+          {
+            "node": "Save Predictions CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Predictions CSV": {
+      "main": [
+        [
+          {
+            "node": "Log Prediction Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-15T10:00:00.000Z",
+  "versionId": "1"
+}

@@ -1,9 +1,0 @@
-[
-  {
-    "timestamp": "2025-08-12T12:25:14.810254",
-    "alert_type": "low_performance",
-    "severity": "high",
-    "message": "Very low model performance detected: 0.473",
-    "performance_score": 0.47304034083026764
-  }
-]

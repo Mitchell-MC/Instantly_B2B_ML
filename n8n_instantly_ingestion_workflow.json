@@ -1,0 +1,264 @@
+{
+  "name": "Instantly Data Ingestion Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "name": "Daily Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "instantlyApi",
+        "url": "https://api.instantly.ai/api/v1/campaigns",
+        "options": {}
+      },
+      "name": "Get Instantly Campaigns",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract campaign IDs for lead fetching\nconst campaigns = $input.all();\nconst campaignIds = campaigns.map(campaign => campaign.json.id);\n\nreturn campaignIds.map(id => ({ json: { campaign_id: id } }));"
+      },
+      "name": "Process Campaign IDs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "instantlyApi",
+        "url": "=https://api.instantly.ai/api/v1/campaigns/{{ $json.campaign_id }}/leads",
+        "options": {
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "limit",
+                "value": "1000"
+              },
+              {
+                "name": "status",
+                "value": "all"
+              }
+            ]
+          }
+        }
+      },
+      "name": "Get Campaign Leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process and enrich lead data\nconst leads = $input.all();\nconst processedLeads = [];\n\nfor (const leadBatch of leads) {\n  if (leadBatch.json && leadBatch.json.data) {\n    for (const lead of leadBatch.json.data) {\n      const processedLead = {\n        lead_id: lead.id,\n        campaign_id: lead.campaign_id,\n        email: lead.email,\n        first_name: lead.first_name,\n        last_name: lead.last_name,\n        company: lead.company,\n        title: lead.title,\n        industry: lead.industry,\n        lead_status: lead.status,\n        open_rate: parseFloat(lead.open_rate || 0),\n        click_rate: parseFloat(lead.click_rate || 0),\n        reply_rate: parseFloat(lead.reply_rate || 0),\n        bounce_rate: parseFloat(lead.bounce_rate || 0),\n        last_activity_date: lead.last_activity_date,\n        created_date: lead.created_date,\n        raw_data: JSON.stringify(lead),\n        ingestion_timestamp: new Date().toISOString()\n      };\n      processedLeads.push({ json: processedLead });\n    }\n  }\n}\n\nreturn processedLeads;"
+      },
+      "name": "Process Lead Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "ml_lead_scoring",
+        "table": "bronze_instantly_leads",
+        "columns": "lead_id, campaign_id, email, first_name, last_name, company, title, industry, lead_status, open_rate, click_rate, reply_rate, bounce_rate, last_activity_date, created_date, raw_data, ingestion_timestamp",
+        "additionalFields": {
+          "mode": "upsert",
+          "upsertKeyColumns": "lead_id"
+        }
+      },
+      "name": "Upsert to Bronze Layer",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Trigger silver layer processing\nconst updatedLeads = $input.all();\nconst leadIds = updatedLeads.map(lead => lead.json.lead_id);\n\n// Return lead IDs for silver layer processing\nreturn [{ json: { lead_ids: leadIds, batch_size: leadIds.length } }];"
+      },
+      "name": "Prepare for Silver Processing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpBasicAuth",
+        "requestMethod": "POST",
+        "url": "http://localhost:5000/api/process-silver-layer",
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ $json }}",
+        "options": {}
+      },
+      "name": "Trigger Silver Layer Processing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.batch_size }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "name": "Check if Data Updated",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1560, 500]
+    },
+    {
+      "parameters": {
+        "subject": "Instantly Data Ingestion Complete",
+        "message": "=Successfully processed {{ $json.batch_size }} leads from Instantly API.\n\nTimestamp: {{ new Date().toISOString() }}\nNext processing: Silver layer feature engineering",
+        "options": {}
+      },
+      "name": "Send Success Notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error handling and logging\nconst error = $input.all()[0];\nconsole.error('Instantly ingestion error:', error);\n\nreturn [{\n  json: {\n    error: true,\n    message: error.message || 'Unknown error during Instantly data ingestion',\n    timestamp: new Date().toISOString(),\n    pipeline: 'instantly_ingestion'\n  }\n}];"
+      },
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1560, 700]
+    }
+  ],
+  "connections": {
+    "Daily Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Instantly Campaigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Instantly Campaigns": {
+      "main": [
+        [
+          {
+            "node": "Process Campaign IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Campaign IDs": {
+      "main": [
+        [
+          {
+            "node": "Get Campaign Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Campaign Leads": {
+      "main": [
+        [
+          {
+            "node": "Process Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Upsert to Bronze Layer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert to Bronze Layer": {
+      "main": [
+        [
+          {
+            "node": "Prepare for Silver Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare for Silver Processing": {
+      "main": [
+        [
+          {
+            "node": "Check if Data Updated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Data Updated": {
+      "main": [
+        [
+          {
+            "node": "Trigger Silver Layer Processing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Trigger Silver Layer Processing": {
+      "main": [
+        [
+          {
+            "node": "Send Success Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-20T10:00:00.000Z",
+  "versionId": "1"
+}

@@ -1,0 +1,436 @@
+{
+  "test_timestamp": "2025-09-02T13:49:22.032925",
+  "tests": {
+    "instantly_campaigns": {
+      "success": true,
+      "count": 10,
+      "data": [
+        {
+          "id": "f58215b3-0ca5-4929-a92a-cae92313534b",
+          "name": "Louise_HealthCare_50-100_UAE",
+          "status": 3,
+          "campaign_schedule": {
+            "schedules": [
+              {
+                "name": "New schedule",
+                "timing": {
+                  "from": "09:00",
+                  "to": "17:00"
+                },
+                "days": {
+                  "1": true,
+                  "2": true,
+                  "3": true,
+                  "4": true,
+                  "5": true
+                },
+                "timezone": "Asia/Aden"
+              }
+            ],
+            "start_date": "",
+            "end_date": ""
+          },
+          "timestamp_created": "2025-05-07T19:54:10.459Z",
+          "timestamp_updated": "2025-05-22T19:09:56.993Z",
+          "sequences": [
+            {
+              "steps": [
+                {
+                  "type": "email",
+                  "delay": 5,
+                  "variants": [
+                    {
+                      "subject": "{{firstName}} who\u2019s driving your AI upskilling?",
+                      "body": "<div>{{firstName}},</div><div><br /></div><div>84% of healthcare and pharma leaders say AI plans stall due to internal skill gaps. You may have the data and tools\u2014but without the skills, nothing moves.</div><div><br /></div><div>Our <a href=\"https://weclouddata.com/corporate-training/?utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=saudi-healthcare\">AI upskilling tracks</a> are designed for:</div><ul data-start=\"199\" data-end=\"336\"><li data-start=\"199\" data-end=\"250\"><div>Clinical and research teams\u2014not just tech staff</div></li><li data-start=\"251\" data-end=\"295\"><div>Real-world use cases\u2014not generic lessons</div></li><li data-start=\"296\" data-end=\"336\"><div>Fast onboarding in Arabic or English</div></li></ul><div>{{RANDOM| Is this something you\u2019re tackling this year? | Do you have any time this or next week for a quick chat about this? | Should I send more details?}}</div><div><br /></div><div>{{RANDOM | Best, | Regards, | Cheers,}}</div><div>WeCloudData</div>"
+                    },
+                    {
+                      "subject": "{{first_name}}, how AI could help {{companyName}}",
+                      "body": "<div>{{firstName}},</div><div><br /></div><div>Imagine this- {{companyName}}'s team uses AI to flag patient risk early, optimize scheduling, reduce admin load \u2014 and they actually trust the system doing it.</div><div><br /></div><div>It\u2019s possible. and it doesn\u2019t require long certifications or external hires.</div><div><br /></div><div>If you\u2019re thinking about how to future-proof your\u00a0<a href=\"https://weclouddata.com/corporate-training/?utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=saudi-healthcare\">team from AI</a> (and align with Saudi Vision 2030), this might be worth a conversation.</div><div><br /></div><div>\u2014 want me to send over a quick personalized 2 min presentation?</div><div><br /></div><div>Warm Regards,</div><div>WeCloudData</div>"
+                    }
+                  ]
+                },
+                {
+                  "type": "email",
+                  "delay": 2,
+                  "variants": [
+                    {
+                      "subject": "",
+                      "body": "<div>{{firstName}}\u00a0</div><div><br /></div><div>By 2030, Saudi expects AI will be baked into every layer of saudi healthcare + pharma. We\u2019re already seeing mandates trickle in \u2014 predictive care, digital trials, smart diagnostics.</div><div><br /></div><div>Your team can\u2019t wait for \u201cAI specialists.\u201d but they need to <a href=\"https://weclouddata.com/corporate-training/?utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=saudi-healthcare\">upskilled with AI</a> to become them. We\u2019re helping Saudi orgs upskill now, fast \u2014still open to a quick chat? Book your slot\u00a0<a href=\"https://meetings.hubspot.com/warney/talk-to-wecloud-program-advisor?uuid=f772e830-c1fe-4c3a-af95-34b2bb557260&amp;utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=saudi-healthcare\">HERE.</a></div><div><br /></div><div>Regards,</div><div>WeCloudData</div>"
+                    },
+                    {
+                      "subject": "{{firstName}} you will find this helpful",
+                      "body": "<div>{{firstName}} its me again,</div><div><br /></div><div>In case you are confused how would AI &amp; Cloud Computing would playout in a healthcare setting, we broke it down in a short blog \u2014 tools used, use cases: <a href=\"https://weclouddata.com/blog/cloud-computing-in-the-healthcare-industry/?utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=saudi-healthcare\">link to blog</a></div><div><br /></div><div>Want me to send over a quick overview deck of we can help\u00a0<a href=\"https://weclouddata.com/corporate-training/?utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=saudi-healthcare\">upskill</a> \u00a0{{companyName}} employees?</div><div><br /></div><div>Best,</div><div>WeCloudData</div>"
+                    }
+                  ]
+                },
+                {
+                  "type": "email",
+                  "delay": 1,
+                  "variants": [
+                    {
+                      "subject": "",
+                      "body": "<div>{{firstName}}\u00a0</div><div><br /></div><div>We built a healthcare-focused <a href=\"https://weclouddata.com/corporate-training/?utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=saudi-healthcare\">AI upskilling program</a> to close that gap \u2014 designed for frontline workers, admins, and medical leaders. short sessions. localized content. real use cases.</div><div><br /></div><div>It\u2019s not about turning doctors into data scientists. It\u2019s about helping them make better decisions, faster.</div><div><br /></div><div>\u2014 Lets <a href=\"https://meetings.hubspot.com/warney/talk-to-wecloud-program-advisor?uuid=f772e830-c1fe-4c3a-af95-34b2bb557260&amp;utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=saudi-healthcare\">chat</a> next week?</div><div><br /></div><div>{{RANDOM | Best, | Regards, | Cheers,}}</div><div>WeCloudData</div><div><br /></div><div><br /></div>"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "text_only": false,
+          "email_list": [
+            "louise.c@weclouddata.net",
+            "louise.c@weclouddata.org",
+            "louise.c@weclouddata.us",
+            "louise.cheng@weclouddata.org",
+            "louise.cheng@weclouddata.us",
+            "louise@weclouddata.net",
+            "louise@weclouddata.org",
+            "louise@weclouddata.us",
+            "louise_c@weclouddata.org",
+            "louise_c@weclouddata.us"
+          ],
+          "daily_limit": 300,
+          "stop_on_reply": true,
+          "email_tag_list": [],
+          "link_tracking": true,
+          "open_tracking": true,
+          "stop_on_auto_reply": false,
+          "organization": "f44277de-69b2-4bc3-a69c-28afd4094123"
+        },
+        {
+          "id": "f40e7ade-d3f8-4404-9fa8-b725c7853e1e",
+          "name": "Louise test v3",
+          "status": 0,
+          "campaign_schedule": {
+            "schedules": [
+              {
+                "name": "Weekday Schedule",
+                "timing": {
+                  "from": "09:00",
+                  "to": "17:00"
+                },
+                "days": {
+                  "1": true,
+                  "2": true,
+                  "3": true,
+                  "4": true,
+                  "5": true
+                },
+                "timezone": "America/Detroit"
+              }
+            ],
+            "start_date": "2025-04-15T16:43:09.647Z",
+            "end_date": "2025-05-15T16:43:09.647Z"
+          },
+          "timestamp_created": "2025-06-26T02:08:32.188Z",
+          "timestamp_updated": "2025-06-26T02:08:43.099Z",
+          "sequences": [
+            {
+              "steps": [
+                {
+                  "type": "email",
+                  "delay": 0,
+                  "variants": [
+                    {
+                      "subject": "Empower Your Data Science Team for the Future of Agriculture",
+                      "body": "<p>Hi [Recipient's Name],</p><p>I hope this message finds you well. As a Partner/VP in the agriculture sector, your role in driving data-driven strategies is crucial to fostering innovation and efficiency. With the rapid evolution of technology and analytics, your team's capability to harness data science effectively can set your organization apart.</p><p>At WeCloudData, we specialize in empowering enterprises like yours through tailored data and AI training programs. Our hybrid learning curriculum is designed specifically for teams in education and finance, ensuring that data scientists not only enhance their skills but also apply them directly to your unique challenges in agriculture.</p><p>**Here's how we can help:**</p><p>- **Corporate Training:** Our customized programs align with your digital transformation goals, enabling your data science team to upskill quickly and effectively, ensuring they are equipped to meet the demands of your industry.</p><p>- **AI Consulting Services:** We provide expert guidance on data strategy and project implementation, helping your organization translate complex analytics into actionable insights that drive business impact.</p><p>- **Talent Partnership Program:** Gain access to a pool of vetted talent in data science and AI, alongside support in training junior professionals and ensuring a seamless hiring process.</p><p>In today's competitive landscape, investing in your team's skills is not just beneficial-it's essential. I'd love to discuss how WeCloudData can support your strategic objectives and help your organization thrive in an increasingly data-centric world.</p><p>Would you be open to a brief call next week to explore this further?</p><p>Best regards,</p><p>Louise   [Your Title]   WeCloudData   [Your Contact Information]   [Your LinkedIn Profile]</p>"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "organization": "f44277de-69b2-4bc3-a69c-28afd4094123"
+        },
+        {
+          "id": "f207fcb1-0054-4985-9026-c705975fd6a7",
+          "name": "Warney - Accounting background",
+          "status": 3,
+          "campaign_schedule": {},
+          "timestamp_created": "2025-01-07T21:17:32.223Z",
+          "timestamp_updated": "2025-01-07T21:22:59.201Z",
+          "sequences": [
+            {
+              "steps": [
+                {
+                  "type": "email",
+                  "delay": 5,
+                  "variants": [
+                    {
+                      "subject": "Transform Accounting with Data Analytics Skills",
+                      "body": "<div>Hi {{firstName}} ,&nbsp;</div><div><br></div><div>I hope this message finds you well. I&rsquo;m excited to share an opportunity designed for accounting professionals to enhance their expertise through our&nbsp;Data Analyst Bootcamp.</div><div><br></div><div>This hands-on program equips participants with data analytics skills tailored to the accounting field, enabling them to streamline financial processes, uncover insights, and make data-driven decisions.</div><div><br></div><div>Why This Bootcamp is Ideal for Accounting Professionals:</div><div><br></div><ul style=\"font-style: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: auto; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; widows: auto; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration: none; caret-color: rgb(0, 0, 0); color: rgb(0, 0, 0);\"><li>Actionable Insights:&nbsp;Learn to analyze financial data and uncover trends that drive business decisions.</li><li>Essential Tools:&nbsp;Gain proficiency in Excel, SQL, and Power BI for advanced data analysis.</li><li>Practical Applications:&nbsp;Work on real-world accounting challenges to apply new skills immediately.</li><li>Flexible Options:&nbsp;Participate virtually or in-person, and use your company&rsquo;s training budget to make it even more accessible.</li></ul><div><a href=\"https://weclouddata.com/courses/online/data-analytics-track/\" target=\"_blank\">Want to know more?</a></div><div><br></div><div>Would you be open to a quick conversation to explore how this Bootcamp could benefit your team? I&rsquo;d be happy to provide more details and answer any questions.</div><div><br></div><div><a href=\"https://meetings.hubspot.com/warney\" target=\"_blank\">Book a meeting with me!</a></div><div><br></div><div>Looking forward to connecting!</div><div><br></div><div>Best regards,</div>"
+                    }
+                  ]
+                },
+                {
+                  "type": "email",
+                  "delay": 1,
+                  "variants": [
+                    {
+                      "subject": " Last Chance to Upskill Your Accounting Team with Data Analytics",
+                      "body": "<div >Hi {{firstName}} ,&nbsp;</div><div><br></div><div>I wanted to follow up one last time about our&nbsp;Data Analyst Bootcamp, designed to help accounting professionals gain the skills they need to excel in today&rsquo;s data-driven world.</div><div><br></div><div>This program focuses on teaching actionable skills like financial data analysis, advanced Excel techniques, SQL, and Power BI&mdash;empowering your team to uncover insights, streamline processes, and make data-driven decisions.</div><div><br></div><div>Want to know more info? <a href=\"https://weclouddata.com/courses/online/data-analytics-track/\" target=\"_blank\">CLICK HERE!</a></div><div><br></div><div>Seats are filling quickly, and with the option to use your company&rsquo;s training budget, this is a timely and accessible way to invest in your team&rsquo;s growth.</div><div><br></div><div>Would you like to discuss next steps or have any last questions? I&rsquo;d be happy to help.</div><div><br></div><div>Book a meeting with me <a href=\"https://meetings.hubspot.com/warney\" target=\"_blank\">HERE!</a></div><div><br></div><div>Don&rsquo;t miss out on this opportunity to empower your accounting team with in-demand analytics skills!</div><div><br></div><div>Best regards,</div>"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "text_only": false,
+          "email_list": [
+            "warney.s@weclouddataacademy.com",
+            "warney.s@weclouddata-corp.com",
+            "w.sarkiss@wecloudtraining.com",
+            "warney.s@wecloudtraining.com",
+            "w.sarkiss@weclouddata-corp.com",
+            "w.sarkis@weclouddataacademy.com",
+            "w.sarkis@weclouddata-corp.com",
+            "w.sarkis@wecloudtraining.com",
+            "w.sarkiss@weclouddataacademy.com",
+            "warney.sarkis@weclouddata-corp.com",
+            "warney.sarkis@weclouddataacademy.com",
+            "warney.sarkis@wecloudtraining.com"
+          ],
+          "daily_limit": 360,
+          "stop_on_reply": true,
+          "email_tag_list": [],
+          "link_tracking": true,
+          "open_tracking": true,
+          "stop_on_auto_reply": false,
+          "organization": "f44277de-69b2-4bc3-a69c-28afd4094123"
+        }
+      ],
+      "message": "Retrieved 10 campaigns"
+    },
+    "instantly_leads": {
+      "success": true,
+      "count": 25,
+      "data": [
+        {
+          "id": "0003c451-2c8d-413d-8caf-2a32feda2a91",
+          "timestamp_created": "2025-04-16T16:52:11.944Z",
+          "timestamp_updated": "2025-04-16T16:52:11.944Z",
+          "organization": "f44277de-69b2-4bc3-a69c-28afd4094123",
+          "status": 3,
+          "email_open_count": 1,
+          "email_reply_count": 0,
+          "email_click_count": 0,
+          "company_domain": "hapana.com",
+          "status_summary": {},
+          "campaign": "d13d243e-1ec9-4340-bc6a-e7b4ebcef6b0",
+          "email": "travis.shannon@hapana.com",
+          "last_name": "Shannon",
+          "first_name": "Travis",
+          "company_name": "Hapana",
+          "payload": {
+            "firstName": "Travis",
+            "lastName": "Shannon",
+            "companyName": "Hapana",
+            "email": "travis.shannon@hapana.com"
+          },
+          "email_opened_step": 0,
+          "email_opened_variant": 0,
+          "timestamp_last_contact": "2025-04-24T14:04:44.450Z",
+          "timestamp_last_open": "2025-04-17T13:30:12.293Z",
+          "upload_method": "manual",
+          "assigned_to": "95e34077-5b10-4ff2-ada7-a9659a12e637",
+          "timestamp_last_touch": "2025-04-24T14:04:44.450Z",
+          "esp_code": 1
+        },
+        {
+          "id": "00061cdc-fe91-4676-aebc-3d7c468a671c",
+          "timestamp_created": "2025-05-12T21:43:56.446Z",
+          "timestamp_updated": "2025-05-12T21:43:56.446Z",
+          "organization": "f44277de-69b2-4bc3-a69c-28afd4094123",
+          "status": 1,
+          "email_open_count": 0,
+          "email_reply_count": 0,
+          "email_click_count": 0,
+          "company_domain": "aamaadmiparty.org",
+          "status_summary": {},
+          "email": "arvindkejriwal@aamaadmiparty.org",
+          "personalization": "",
+          "website": "",
+          "last_name": "Kejriwal",
+          "first_name": "Arvind",
+          "company_name": "",
+          "phone": "",
+          "payload": {
+            "firstName": "Arvind",
+            "lastName": "Kejriwal",
+            "companyName": "",
+            "website": "",
+            "phone": "",
+            "personalization": "",
+            "email": "arvindkejriwal@aamaadmiparty.org"
+          },
+          "upload_method": "api",
+          "esp_code": 1
+        },
+        {
+          "id": "0007a35d-bca1-421f-a64e-c56cc03ca216",
+          "timestamp_created": "2025-03-27T20:10:53.787Z",
+          "timestamp_updated": "2025-03-27T20:10:53.787Z",
+          "organization": "f44277de-69b2-4bc3-a69c-28afd4094123",
+          "status": 3,
+          "email_open_count": 0,
+          "email_reply_count": 0,
+          "email_click_count": 0,
+          "company_domain": "grainger.com",
+          "status_summary": {},
+          "campaign": "8c857078-bac2-4192-bf9f-48b03b94f7a3",
+          "email": "ckenth@grainger.com",
+          "last_name": "Kenth",
+          "first_name": "Cheryl",
+          "company_name": "Grainger",
+          "payload": {
+            "firstName": "Cheryl",
+            "lastName": "Kenth",
+            "companyName": "Grainger",
+            "email": "ckenth@grainger.com"
+          },
+          "timestamp_last_contact": "2025-04-03T13:03:33.168Z",
+          "upload_method": "manual",
+          "assigned_to": "95e34077-5b10-4ff2-ada7-a9659a12e637",
+          "timestamp_last_touch": "2025-04-03T13:03:33.168Z",
+          "esp_code": 2
+        },
+        {
+          "id": "0007b508-9727-4a55-9cc7-28efa3084888",
+          "timestamp_created": "2025-07-09T18:58:56.378Z",
+          "timestamp_updated": "2025-07-09T18:58:56.378Z",
+          "organization": "f44277de-69b2-4bc3-a69c-28afd4094123",
+          "status": 3,
+          "email_open_count": 0,
+          "email_reply_count": 0,
+          "email_click_count": 0,
+          "company_domain": "jahinsurance.com",
+          "status_summary": {},
+          "campaign": "e401a03d-a5e8-47d7-a358-2d1585c490c8",
+          "email": "talentohumano@jahinsurance.com",
+          "last_name": "Lopez",
+          "first_name": "Diana",
+          "company_name": "JAH Insurance Brokers",
+          "payload": {
+            "firstName": "Diana",
+            "lastName": "Lopez",
+            "companyName": "JAH Insurance Brokers",
+            "email": "talentohumano@jahinsurance.com"
+          },
+          "timestamp_last_contact": "2025-07-15T12:02:03.458Z",
+          "upload_method": "manual",
+          "assigned_to": "95e34077-5b10-4ff2-ada7-a9659a12e637",
+          "timestamp_last_touch": "2025-07-15T12:02:03.458Z",
+          "esp_code": 2
+        },
+        {
+          "id": "000a77d1-2484-40b6-a548-a01ab7088b5a",
+          "timestamp_created": "2025-03-27T20:21:15.937Z",
+          "timestamp_updated": "2025-03-27T20:21:15.937Z",
+          "organization": "f44277de-69b2-4bc3-a69c-28afd4094123",
+          "status": 3,
+          "email_open_count": 0,
+          "email_reply_count": 0,
+          "email_click_count": 0,
+          "company_domain": "zip.co",
+          "status_summary": {},
+          "campaign": "1249f1a2-7318-481f-809a-5d726cabbd25",
+          "email": "jason.hubbard@zip.co",
+          "last_name": "Hubbard",
+          "first_name": "Jason",
+          "company_name": "Zip Co",
+          "payload": {
+            "firstName": "Jason",
+            "lastName": "Hubbard",
+            "companyName": "Zip Co",
+            "email": "jason.hubbard@zip.co"
+          },
+          "timestamp_last_contact": "2025-04-07T13:32:45.892Z",
+          "upload_method": "manual",
+          "assigned_to": "95e34077-5b10-4ff2-ada7-a9659a12e637",
+          "timestamp_last_touch": "2025-04-07T13:32:45.892Z",
+          "esp_code": 1
+        }
+      ],
+      "message": "Retrieved 25 leads"
+    },
+    "apollo_health": {
+      "success": true,
+      "health_data": {
+        "healthy": true,
+        "is_logged_in": true
+      },
+      "rate_headers": {},
+      "message": "Apollo API is healthy"
+    },
+    "instantly_analytics": {
+      "success": true,
+      "count": 10,
+      "data": [
+        {
+          "date": "2025-05-09",
+          "sent": 109,
+          "opened": 52,
+          "unique_opened": 48,
+          "replies": 0,
+          "unique_replies": 0,
+          "clicks": 3,
+          "unique_clicks": 2
+        },
+        {
+          "date": "2025-05-14",
+          "sent": 109,
+          "opened": 66,
+          "unique_opened": 49,
+          "replies": 0,
+          "unique_replies": 0,
+          "clicks": 3,
+          "unique_clicks": 2
+        },
+        {
+          "date": "2025-05-15",
+          "sent": 0,
+          "opened": 1,
+          "unique_opened": 1,
+          "replies": 0,
+          "unique_replies": 0,
+          "clicks": 0,
+          "unique_clicks": 0
+        },
+        {
+          "date": "2025-05-16",
+          "sent": 109,
+          "opened": 46,
+          "unique_opened": 43,
+          "replies": 0,
+          "unique_replies": 0,
+          "clicks": 4,
+          "unique_clicks": 2
+        },
+        {
+          "date": "2025-05-17",
+          "sent": 0,
+          "opened": 1,
+          "unique_opened": 1,
+          "replies": 0,
+          "unique_replies": 0,
+          "clicks": 0,
+          "unique_clicks": 0
+        }
+      ],
+      "message": "Retrieved 10 analytics records"
+    }
+  },
+  "summary": {
+    "total_tests": 4,
+    "successful_tests": 4,
+    "failed_tests": 0,
+    "success_rate": 100.0,
+    "successful_test_names": [
+      "instantly_campaigns",
+      "instantly_leads",
+      "apollo_health",
+      "instantly_analytics"
+    ],
+    "failed_test_names": []
+  }
+}

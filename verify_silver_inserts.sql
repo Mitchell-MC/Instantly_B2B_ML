@@ -135,3 +135,4 @@ SELECT
     COUNT(*) - COUNT(DISTINCT id) as duplicate_count
 FROM leads.silver_ml_features;
 
+

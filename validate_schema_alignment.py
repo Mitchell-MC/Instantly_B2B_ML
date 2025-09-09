@@ -34,7 +34,7 @@ class SchemaValidator:
             SELECT column_name, data_type, is_nullable
             FROM information_schema.columns 
             WHERE table_schema = 'leads' 
-            AND table_name = 'instantly_enriched_contacts'
+            AND table_name = 'enriched_contacts'
             ORDER BY ordinal_position;
             """
             
@@ -100,7 +100,7 @@ class SchemaValidator:
     def test_sample_data_extraction(self) -> dict:
         """Test extracting a small sample to validate data types"""
         try:
-            query = "SELECT * FROM leads.instantly_enriched_contacts LIMIT 5"
+            query = "SELECT * FROM leads.enriched_contacts LIMIT 5"
             df = pd.read_sql(query, self.engine)
             
             return {
@@ -119,13 +119,13 @@ class SchemaValidator:
     def validate_target_variable_creation(self) -> dict:
         """Test target variable creation logic"""
         try:
-            # Test with a small sample using actual column names
+            # Test with a small sample using actual column names from enriched_contacts
             query = """
-            SELECT I_email_open_count, I_email_click_count, I_email_reply_count
-            FROM leads.instantly_enriched_contacts 
-            WHERE I_email_open_count IS NOT NULL 
-               OR I_email_click_count IS NOT NULL 
-               OR I_email_reply_count IS NOT NULL
+            SELECT email_open_count, email_click_count, email_reply_count
+            FROM leads.enriched_contacts 
+            WHERE email_open_count IS NOT NULL 
+               OR email_click_count IS NOT NULL 
+               OR email_reply_count IS NOT NULL
             LIMIT 10
             """
             
@@ -138,16 +138,13 @@ class SchemaValidator:
                 }
             
             # Test target variable creation logic using actual column names
-            engagement_cols = ['I_email_open_count', 'I_email_click_count', 'I_email_reply_count']
+            engagement_cols = ['email_open_count', 'email_click_count', 'email_reply_count']
             for col in engagement_cols:
                 if col in df.columns:
                     df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
             
-            # Create engagement level (mapping to standard names first)
+            # Create engagement level (columns already have correct names)
             import numpy as np
-            df['email_open_count'] = df['I_email_open_count']
-            df['email_click_count'] = df['I_email_click_count']
-            df['email_reply_count'] = df['I_email_reply_count']
             
             conditions = [
                 ((df['email_click_count'] > 0) | (df['email_reply_count'] > 0)),
@@ -177,7 +174,7 @@ class SchemaValidator:
             query = """
             SELECT column_name, data_type, is_nullable
             FROM information_schema.columns 
-            WHERE table_schema = 'ml_lead_scoring' 
+            WHERE table_schema = 'leads' 
             AND table_name = 'silver_ml_features'
             ORDER BY ordinal_position;
             """
